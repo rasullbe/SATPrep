@@ -1,0 +1,6 @@
+@SATPrep.Api_HostAddress = http://localhost:5279
+
+GET {{SATPrep.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
