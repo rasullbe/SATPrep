@@ -2,6 +2,8 @@ namespace SATPrep.Api.Entities;
 
 public class QuizQuestion
 {
+    public long Id { get; set; }
+
     public long QuizId { get; set; }
     public Quiz Quiz { get; set; } = null!;
 
