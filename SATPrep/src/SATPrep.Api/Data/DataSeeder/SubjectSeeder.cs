@@ -10,9 +10,8 @@ public static class SubjectSeeder
 
         var subjects = new List<Subject>
         {
+            new() { Name = "Reading and Writing" },
             new() { Name = "Math" },
-            new() { Name = "Reading" },
-            new() { Name = "Writing" },
         };
 
         await context.Subjects.AddRangeAsync(subjects);

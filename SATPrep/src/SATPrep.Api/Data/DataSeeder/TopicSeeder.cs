@@ -8,29 +8,27 @@ public static class TopicSeeder
     {
         if (context.Topics.Any()) return;
 
+        var readingWriting = context.Subjects.FirstOrDefault(s => s.Name == "Reading and Writing");
         var math = context.Subjects.FirstOrDefault(s => s.Name == "Math");
-        var reading = context.Subjects.FirstOrDefault(s => s.Name == "Reading");
-        var writing = context.Subjects.FirstOrDefault(s => s.Name == "Writing");
 
         var topics = new List<Topic>();
 
+        // Reading and Writing domains (SAT 2026 format)
+        if (readingWriting is not null)
+        {
+            topics.Add(new Topic { Name = "Craft and Structure", SubjectId = readingWriting.SubjectId });
+            topics.Add(new Topic { Name = "Information and Ideas", SubjectId = readingWriting.SubjectId });
+            topics.Add(new Topic { Name = "Standard English Conventions", SubjectId = readingWriting.SubjectId });
+            topics.Add(new Topic { Name = "Expression of Ideas", SubjectId = readingWriting.SubjectId });
+        }
+
+        // Math domains (SAT 2026 format)
         if (math is not null)
         {
             topics.Add(new Topic { Name = "Algebra", SubjectId = math.SubjectId });
-            topics.Add(new Topic { Name = "Geometry", SubjectId = math.SubjectId });
-        }
-
-        if (reading is not null)
-        {
-            topics.Add(new Topic { Name = "Comprehension", SubjectId = reading.SubjectId });
-            topics.Add(new Topic { Name = "Passage Mapping", SubjectId = reading.SubjectId });
-        }
-
-        if (writing is not null)
-        {
-            topics.Add(new Topic { Name = "Grammar", SubjectId = writing.SubjectId });
-            // Replace 'Essay' with SAT-relevant writing topic: 'Conventions' (Standard English Conventions)
-            topics.Add(new Topic { Name = "Conventions", SubjectId = writing.SubjectId });
+            topics.Add(new Topic { Name = "Advanced Math", SubjectId = math.SubjectId });
+            topics.Add(new Topic { Name = "Geometry and Trigonometry", SubjectId = math.SubjectId });
+            topics.Add(new Topic { Name = "Problem-Solving and Data Analysis", SubjectId = math.SubjectId });
         }
 
         if (topics.Any())

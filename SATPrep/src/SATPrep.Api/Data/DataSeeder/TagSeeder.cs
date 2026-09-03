@@ -10,11 +10,16 @@ public static class TagSeeder
 
         var tags = new List<Tag>
         {
+            // Reading and Writing domains
+            new() { Name = "craft-and-structure" },
+            new() { Name = "information-and-ideas" },
+            new() { Name = "standard-english-conventions" },
+            new() { Name = "expression-of-ideas" },
+            // Math domains
             new() { Name = "algebra" },
-            new() { Name = "geometry" },
-            new() { Name = "vocabulary" },
-            new() { Name = "grammar" },
-            new() { Name = "passage" },
+            new() { Name = "advanced-math" },
+            new() { Name = "geometry-and-trigonometry" },
+            new() { Name = "problem-solving-data-analysis" },
         };
 
         await context.Tags.AddRangeAsync(tags);
