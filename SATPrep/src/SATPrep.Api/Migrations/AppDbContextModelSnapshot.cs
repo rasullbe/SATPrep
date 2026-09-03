@@ -42,7 +42,7 @@ namespace SATPrep.Api.Migrations
 
                     b.HasIndex("TagId");
 
-                    b.ToTable("QuestionTags");
+                    b.ToTable("QuestionTags", (string)null);
                 });
 
             modelBuilder.Entity("SATPrep.Api.Entities.Answer", b =>
@@ -76,7 +76,7 @@ namespace SATPrep.Api.Migrations
 
                     b.HasIndex("SelectedChoiceId");
 
-                    b.ToTable("Answers");
+                    b.ToTable("Answers", (string)null);
                 });
 
             modelBuilder.Entity("SATPrep.Api.Entities.Choice", b =>
@@ -101,7 +101,7 @@ namespace SATPrep.Api.Migrations
 
                     b.HasIndex("QuestionId");
 
-                    b.ToTable("Choices");
+                    b.ToTable("Choices", (string)null);
                 });
 
             modelBuilder.Entity("SATPrep.Api.Entities.Flashcard", b =>
@@ -133,7 +133,7 @@ namespace SATPrep.Api.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Flashcards");
+                    b.ToTable("Flashcards", (string)null);
                 });
 
             modelBuilder.Entity("SATPrep.Api.Entities.Question", b =>
@@ -158,7 +158,7 @@ namespace SATPrep.Api.Migrations
 
                     b.HasIndex("TopicId");
 
-                    b.ToTable("Questions");
+                    b.ToTable("Questions", (string)null);
                 });
 
             modelBuilder.Entity("SATPrep.Api.Entities.Quiz", b =>
@@ -188,7 +188,7 @@ namespace SATPrep.Api.Migrations
 
                     b.HasIndex("CreatedById");
 
-                    b.ToTable("Quizzes");
+                    b.ToTable("Quizzes", (string)null);
                 });
 
             modelBuilder.Entity("SATPrep.Api.Entities.QuizAttempt", b =>
@@ -220,7 +220,7 @@ namespace SATPrep.Api.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("QuizAttempts");
+                    b.ToTable("QuizAttempts", (string)null);
                 });
 
             modelBuilder.Entity("SATPrep.Api.Entities.QuizQuestion", b =>
@@ -246,7 +246,7 @@ namespace SATPrep.Api.Migrations
 
                     b.HasIndex("QuizId");
 
-                    b.ToTable("QuizQuestions");
+                    b.ToTable("QuizQuestions", (string)null);
                 });
 
             modelBuilder.Entity("SATPrep.Api.Entities.Subject", b =>
@@ -264,7 +264,7 @@ namespace SATPrep.Api.Migrations
 
                     b.HasKey("SubjectId");
 
-                    b.ToTable("Subjects");
+                    b.ToTable("Subjects", (string)null);
                 });
 
             modelBuilder.Entity("SATPrep.Api.Entities.Tag", b =>
@@ -282,7 +282,7 @@ namespace SATPrep.Api.Migrations
 
                     b.HasKey("TagId");
 
-                    b.ToTable("Tags");
+                    b.ToTable("Tags", (string)null);
                 });
 
             modelBuilder.Entity("SATPrep.Api.Entities.Topic", b =>
@@ -305,7 +305,7 @@ namespace SATPrep.Api.Migrations
 
                     b.HasIndex("SubjectId");
 
-                    b.ToTable("Topics");
+                    b.ToTable("Topics", (string)null);
                 });
 
             modelBuilder.Entity("SATPrep.Api.Entities.User", b =>
@@ -339,7 +339,7 @@ namespace SATPrep.Api.Migrations
 
                     b.HasKey("UserId");
 
-                    b.ToTable("Users");
+                    b.ToTable("Users", (string)null);
                 });
 
             modelBuilder.Entity("QuestionTag", b =>
