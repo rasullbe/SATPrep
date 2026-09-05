@@ -11,7 +11,7 @@ namespace SATPrep.Api.Controllers
     {
         private readonly IUserService _userService;
 
-        private UsersController(IUserService userService)
+        public UsersController(IUserService userService)
         {
             _userService = userService;
         }
@@ -25,5 +25,13 @@ namespace SATPrep.Api.Controllers
             return StatusCode(StatusCodes.Status201Created, user);
         }
 
+        [HttpPut("{id}")]
+        [ProducesResponseType(typeof(UserGetDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<UserGetDto>> Update(int id, [FromBody] UserUpdateDto dto)
+        {
+            var user = await _userService.UpdateAsync(id, dto);
+            return Ok(user);
+        }
     }
 }
