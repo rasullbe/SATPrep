@@ -51,17 +51,13 @@ public class QuizService : IQuizService
         return quiz.ToGetDto();
     }
 
-    public async Task<QuizGetDto?> UpdateAsync(long quizId, QuizCreateDto updateDto)
+    public async Task<QuizGetDto?> UpdateAsync(long id, QuizUpdateDto dto)
     {
-        if (updateDto is null)
-            throw new ArgumentNullException(nameof(updateDto));
-
-        var quiz = await _quizRepository.GetByIdAsync(quizId);
+        var quiz = await _quizRepository.GetByIdAsync(id);
         if (quiz is null)
             return null;
 
-        quiz.Title = updateDto.Title?.Trim() ?? string.Empty;
-        quiz.Description = updateDto.Description ?? string.Empty;
+        quiz.UpdateFrom(dto);
 
         if (!await _quizRepository.SaveChangesAsync())
             return null;
@@ -75,6 +71,7 @@ public class QuizService : IQuizService
         if (quiz is null)
             return false;
 
+        _quizRepository.Remove(quiz);
         return await _quizRepository.SaveChangesAsync();
     }
 

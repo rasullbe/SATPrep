@@ -38,4 +38,9 @@ public class QuizRepository : IQuizRepository
     {
         return await _context.SaveChangesAsync() > 0;
     }
+
+    public void Remove(Quiz quiz)
+    {
+        _context.Quizzes.Remove(quiz);
+    }
 }

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using SATPrep.Api.Data;
 using SATPrep.Api.Data.DataSeeder;
+using SATPrep.Api.Middlewares;
 using SATPrep.Api.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -25,6 +26,8 @@ builder.Services.AddScoped<IQuizAttemptRepository, QuizAttemptRepository>();
 builder.Services.AddScoped<ITagRepository, TagRepository>();
 
 var app = builder.Build();
+
+app.UseMiddleware<ExceptionMiddleware>();
 
 using (var scope = app.Services.CreateScope())
 {

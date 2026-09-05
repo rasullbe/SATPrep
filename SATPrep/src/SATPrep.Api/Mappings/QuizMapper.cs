@@ -42,4 +42,16 @@ public static class QuizMapper
 
         return new QuizDetailGetDto(entity.QuizId, entity.Title ?? string.Empty, entity.Description ?? string.Empty, entity.CreatedById, entity.CreatedAt, questions);
     }
+
+    public static void UpdateFrom(this Quiz entity, QuizUpdateDto dto)
+    {
+        if (entity is null) throw new ArgumentNullException(nameof(entity));
+        if (dto is null) throw new ArgumentNullException(nameof(dto));
+
+        if (dto.Title is not null)
+            entity.Title = dto.Title.Trim();
+
+        if (dto.Description is not null)
+            entity.Description = dto.Description;
+    }
 }

@@ -9,4 +9,5 @@ public interface IQuizRepository
     Task<List<Quiz>> GetAllAsync();
     Task AddAsync(Quiz quiz);
     Task<bool> SaveChangesAsync();
+    void Remove(Quiz quiz);
 }

@@ -9,7 +9,7 @@ public interface IQuizService
     Task<List<QuizGetDto>> GetAllAsync();
     Task<List<QuizGetDto>> GetByCreatorAsync(long creatorId);
     Task<QuizGetDto?> CreateAsync(QuizCreateDto createDto);
-    Task<QuizGetDto?> UpdateAsync(long quizId, QuizCreateDto updateDto);
+    Task<QuizGetDto?> UpdateAsync(long id, QuizUpdateDto dto);
     Task<bool> DeleteAsync(long quizId);
     Task<bool> AddQuestionAsync(long quizId, long questionId, int order);
     Task<bool> RemoveQuestionAsync(long quizId, long questionId);
