@@ -31,11 +31,13 @@ public class ExceptionMiddleware
     {
         int statusCode;
         string message;
+        string? field = null;
 
         if (ex is ApiException apiEx)
         {
             statusCode = apiEx.StatusCode;
             message = apiEx.Message;
+            field = (ex as BadRequestException)?.Field;
         }
         else
         {
@@ -47,7 +49,9 @@ public class ExceptionMiddleware
         context.Response.ContentType = "application/json";
         context.Response.StatusCode = statusCode;
 
-        var response = new { message };
+        var response = new ErrorResponse(message, field);
         await context.Response.WriteAsync(JsonSerializer.Serialize(response));
     }
+
+    private record ErrorResponse(string Message, string? Field);
 }
