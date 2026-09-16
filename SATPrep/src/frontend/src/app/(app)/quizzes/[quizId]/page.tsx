@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   getQuizTakeData,
@@ -8,6 +8,7 @@ import {
   completeQuizAttempt,
   type QuizTakeDto,
   type QuizAttemptGetDto,
+  type ChoiceGetDto,
 } from "@/lib/api";
 import {
   LoadingSpinner,
@@ -25,7 +26,76 @@ function formatTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-const LETTERS = ["A", "B", "C", "D", "E", "F"];
+interface ParsedQuestion {
+  passage: string | null;
+  prompt: string;
+  choices: { choiceId: number; text: string; letter: string }[];
+  isStudentProduced: boolean;
+}
+
+function parseQuestion(rawText: string, rawChoices: ChoiceGetDto[]): ParsedQuestion {
+  let cleanedText = (rawText || "").trim();
+
+  // 1. Check if choices are embedded in text: e.g. "(A) 5 (B) 9.67 (C) 15 (D) 29"
+  const choiceMatch = cleanedText.match(
+    /\(A\)\s*([\s\S]*?)\s*\(B\)\s*([\s\S]*?)\s*\(C\)\s*([\s\S]*?)\s*\(D\)\s*([\s\S]*)$/i
+  );
+
+  let extractedChoices: { text: string; letter: string }[] = [];
+  if (choiceMatch) {
+    cleanedText = cleanedText.replace(choiceMatch[0], "").trim();
+    extractedChoices = [
+      { letter: "A", text: choiceMatch[1].trim() },
+      { letter: "B", text: choiceMatch[2].trim() },
+      { letter: "C", text: choiceMatch[3].trim() },
+      { letter: "D", text: choiceMatch[4].trim() },
+    ];
+  }
+
+  // 2. Resolve choices
+  let finalChoices: { choiceId: number; text: string; letter: string }[] = [];
+
+  if (rawChoices && rawChoices.length > 0) {
+    finalChoices = rawChoices.map((c, idx) => {
+      let t = c.text.trim();
+      t = t.replace(/^\([A-D]\)\s*/i, "").replace(/^[A-D][\)\.]\s*/i, "");
+      return {
+        choiceId: c.choiceId,
+        text: t,
+        letter: ["A", "B", "C", "D", "E"][idx] || `${idx + 1}`,
+      };
+    });
+  } else if (extractedChoices.length > 0) {
+    finalChoices = extractedChoices.map((ec, idx) => ({
+      choiceId: -(idx + 1), // Virtual ID if synthesized
+      text: ec.text,
+      letter: ec.letter,
+    }));
+  }
+
+  // 3. Separate passage vs prompt
+  let passage: string | null = null;
+  let prompt: string = cleanedText;
+
+  if (cleanedText.includes("\n\n")) {
+    const parts = cleanedText.split("\n\n");
+    passage = parts.slice(0, parts.length - 1).join("\n\n").trim();
+    prompt = parts[parts.length - 1].trim();
+  } else if (cleanedText.includes("\n")) {
+    const lines = cleanedText.split("\n").filter((l) => l.trim().length > 0);
+    if (lines.length > 1) {
+      passage = lines.slice(0, lines.length - 1).join("\n").trim();
+      prompt = lines[lines.length - 1].trim();
+    }
+  }
+
+  return {
+    passage,
+    prompt: prompt || cleanedText,
+    choices: finalChoices,
+    isStudentProduced: finalChoices.length === 0,
+  };
+}
 
 export default function BluebookExamPage() {
   const { quizId } = useParams<{ quizId: string }>();
@@ -37,7 +107,12 @@ export default function BluebookExamPage() {
 
   const [phase, setPhase] = useState<Phase>("intro");
   const [attempt, setAttempt] = useState<QuizAttemptGetDto | null>(null);
+
+  // Answers map: questionId -> selectedChoiceId (or numeric choice ID)
   const [answers, setAnswers] = useState<Map<number, number>>(new Map());
+  // Free text answers for Student-Produced Response (Grid-in) questions
+  const [textAnswers, setTextAnswers] = useState<Map<number, string>>(new Map());
+
   const [flagged, setFlagged] = useState<Set<number>>(new Set());
   const [eliminatedChoices, setEliminatedChoices] = useState<Map<number, Set<number>>>(new Map());
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -94,7 +169,7 @@ export default function BluebookExamPage() {
     const elapsedSeconds = Math.floor((Date.now() - startTimeRef.current) / 1000);
     const answersArray = Array.from(answers.entries()).map(([questionId, selectedChoiceId]) => ({
       questionId,
-      selectedChoiceId,
+      selectedChoiceId: selectedChoiceId > 0 ? selectedChoiceId : null,
     }));
 
     try {
@@ -159,6 +234,27 @@ export default function BluebookExamPage() {
     });
   };
 
+  const setFreeResponseAnswer = (questionId: number, val: string) => {
+    setTextAnswers((prev) => {
+      const next = new Map(prev);
+      next.set(questionId, val);
+      return next;
+    });
+    if (val.trim()) {
+      setAnswers((prev) => {
+        const next = new Map(prev);
+        next.set(questionId, 1); // Mark as answered
+        return next;
+      });
+    } else {
+      setAnswers((prev) => {
+        const next = new Map(prev);
+        next.delete(questionId);
+        return next;
+      });
+    }
+  };
+
   const toggleFlag = (questionId: number) => {
     setFlagged((prev) => {
       const next = new Set(prev);
@@ -179,7 +275,6 @@ export default function BluebookExamPage() {
         currentSet.delete(choiceId);
       } else {
         currentSet.add(choiceId);
-        // If this choice was selected, unselect it
         if (answers.get(questionId) === choiceId) {
           const updatedAnswers = new Map(answers);
           updatedAnswers.delete(questionId);
@@ -212,14 +307,17 @@ export default function BluebookExamPage() {
   const answeredCount = answers.size;
   const currentQuestion = questions[currentIndex];
 
+  const parsed = parseQuestion(currentQuestion?.text || "", currentQuestion?.choices || []);
+  const isCurrentAnswered = answers.has(currentQuestion?.questionId);
+  const isQuestionFlagged = flagged.has(currentQuestion?.questionId);
+  const currentEliminated = eliminatedChoices.get(currentQuestion?.questionId) || new Set();
+
   /* ------------------- INTRO PHASE ------------------- */
   if (phase === "intro") {
     return (
       <div className="min-h-screen bg-[#f8fafc] py-12 px-4 sm:px-6">
         <div className="mx-auto max-w-2xl">
-          {/* Bluebook College Board Card */}
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg">
-            {/* Top Navy Banner */}
             <div className="bg-[#002b49] px-8 py-6 text-white">
               <div className="flex items-center justify-between">
                 <span className="rounded-md bg-[#0077c8] px-2.5 py-1 text-xs font-bold tracking-wider uppercase">
@@ -235,7 +333,6 @@ export default function BluebookExamPage() {
               )}
             </div>
 
-            {/* Test Details and Guidelines */}
             <div className="space-y-6 p-8">
               <div className="grid grid-cols-2 gap-4 border-b border-slate-100 pb-6 text-sm sm:grid-cols-3">
                 <div className="rounded-xl bg-slate-50 p-4 border border-slate-200/80">
@@ -250,11 +347,10 @@ export default function BluebookExamPage() {
                 </div>
                 <div className="col-span-2 sm:col-span-1 rounded-xl bg-slate-50 p-4 border border-slate-200/80">
                   <p className="text-xs font-semibold uppercase text-slate-500">Calculator & Tools</p>
-                  <p className="mt-1 text-sm font-semibold text-[#0077c8]">Allowed throughout</p>
+                  <p className="mt-1 text-sm font-semibold text-[#0077c8]">Active on-screen</p>
                 </div>
               </div>
 
-              {/* Official Instructions */}
               <div>
                 <h2 className="text-base font-bold text-slate-900">Module Instructions</h2>
                 <ul className="mt-3 space-y-2.5 text-sm text-slate-600">
@@ -269,7 +365,7 @@ export default function BluebookExamPage() {
                       ✓
                     </span>
                     <span>
-                      You can flag questions using the <strong>Mark for Review</strong> button to return to them later.
+                      Flag questions using the <strong>Mark for Review</strong> button to return to them before submitting.
                     </span>
                   </li>
                   <li className="flex items-start gap-2.5">
@@ -277,19 +373,18 @@ export default function BluebookExamPage() {
                       ✓
                     </span>
                     <span>
-                      You have access to an on-screen <strong>Reference Sheet</strong> for Math formulas and an on-screen <strong>Calculator</strong>.
+                      Access the on-screen <strong>Reference Sheet</strong> for Math formulas and the built-in <strong>Calculator</strong>.
                     </span>
                   </li>
                   <li className="flex items-start gap-2.5">
                     <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-[#0077c8]">
                       ✓
                     </span>
-                    <span>Use the question navigator at any point to jump between questions.</span>
+                    <span>Use the <strong>Cross-out</strong> tool to strike through eliminated options.</span>
                   </li>
                 </ul>
               </div>
 
-              {/* Start Button */}
               <div className="pt-4">
                 <button
                   onClick={handleStart}
@@ -318,7 +413,6 @@ export default function BluebookExamPage() {
     const unansweredCount = questions.length - answeredCount;
     return (
       <div className="flex min-h-screen flex-col bg-[#f8fafc]">
-        {/* Bluebook Header */}
         <header className="bluebook-header sticky top-0 z-20 flex h-14 items-center justify-between px-6">
           <div className="flex items-center gap-3">
             <span className="font-bold text-[#002b49]">{quiz.title}</span>
@@ -333,7 +427,6 @@ export default function BluebookExamPage() {
           )}
         </header>
 
-        {/* Content */}
         <main className="flex-1 mx-auto w-full max-w-4xl p-6 sm:p-10">
           <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
             <h1 className="text-2xl font-bold text-[#002b49]">Check Your Work</h1>
@@ -355,7 +448,6 @@ export default function BluebookExamPage() {
               </div>
             )}
 
-            {/* Questions Grid */}
             <div className="mt-8">
               <div className="flex items-center justify-between pb-3 border-b border-slate-200">
                 <h3 className="text-sm font-bold text-slate-800">Questions in this Module</h3>
@@ -374,7 +466,7 @@ export default function BluebookExamPage() {
 
               <div className="mt-4 grid grid-cols-4 gap-3 sm:grid-cols-6 md:grid-cols-8">
                 {questions.map((q, idx) => {
-                  const isAnswered = answers.has(q.questionId);
+                  const answered = answers.has(q.questionId);
                   const isFlag = flagged.has(q.questionId);
                   return (
                     <button
@@ -384,7 +476,7 @@ export default function BluebookExamPage() {
                         setPhase("active");
                       }}
                       className={`relative flex h-14 flex-col items-center justify-center rounded-lg border transition ${
-                        isAnswered
+                        answered
                           ? "border-[#002b49] bg-[#002b49] text-white hover:bg-[#0a3d66]"
                           : "border-dashed border-slate-400 bg-white text-slate-800 hover:border-[#0077c8] hover:bg-sky-50"
                       }`}
@@ -405,7 +497,6 @@ export default function BluebookExamPage() {
               <p className="mt-6 text-center text-sm font-semibold text-red-600">{submitError}</p>
             )}
 
-            {/* Action buttons */}
             <div className="mt-10 flex items-center justify-between border-t border-slate-200 pt-6">
               <button
                 onClick={() => setPhase("active")}
@@ -429,15 +520,10 @@ export default function BluebookExamPage() {
   }
 
   /* ------------------- ACTIVE EXAM PHASE ------------------- */
-  const isAnswered = answers.has(currentQuestion.questionId);
-  const isQuestionFlagged = flagged.has(currentQuestion.questionId);
-  const currentEliminated = eliminatedChoices.get(currentQuestion.questionId) || new Set();
-
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-[#f8fafc] text-slate-900 select-none">
       {/* 1. BLUEBOOK TOP NAVIGATION BAR */}
       <header className="bluebook-header flex h-14 shrink-0 items-center justify-between px-4 sm:px-6">
-        {/* Left: Section name & Directions */}
         <div className="flex items-center gap-3">
           <span className="font-bold text-[#002b49] text-sm sm:text-base tracking-tight truncate max-w-[200px] sm:max-w-md">
             {quiz.title}
@@ -451,7 +537,7 @@ export default function BluebookExamPage() {
           </button>
         </div>
 
-        {/* Center: Hideable Countdown Timer (Authentic Bluebook Style) */}
+        {/* Center: Hideable Countdown Timer */}
         {timeRemaining != null && (
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-1 shadow-xs">
@@ -472,23 +558,23 @@ export default function BluebookExamPage() {
           </div>
         )}
 
-        {/* Right: Bluebook Examination Utilities */}
+        {/* Right: Bluebook Utilities */}
         <div className="flex items-center gap-1 sm:gap-2">
-          {/* Option Eliminator Tool */}
-          <button
-            onClick={() => setIsEliminatorMode((prev) => !prev)}
-            title="Cross out answer choices"
-            className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold transition ${
-              isEliminatorMode
-                ? "bg-amber-100 text-amber-900 border border-amber-300"
-                : "text-slate-600 hover:bg-slate-100 border border-transparent"
-            }`}
-          >
-            <span className="text-sm">✂️</span>
-            <span className="hidden md:inline">Cross-out</span>
-          </button>
+          {!parsed.isStudentProduced && (
+            <button
+              onClick={() => setIsEliminatorMode((prev) => !prev)}
+              title="Cross out answer choices"
+              className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold transition ${
+                isEliminatorMode
+                  ? "bg-amber-100 text-amber-900 border border-amber-300"
+                  : "text-slate-600 hover:bg-slate-100 border border-transparent"
+              }`}
+            >
+              <span className="text-sm">✂️</span>
+              <span className="hidden md:inline">Cross-out</span>
+            </button>
+          )}
 
-          {/* Calculator Tool */}
           <button
             onClick={() => setIsCalculatorOpen(true)}
             title="Calculator"
@@ -498,7 +584,6 @@ export default function BluebookExamPage() {
             <span className="hidden md:inline">Calculator</span>
           </button>
 
-          {/* Math Reference Sheet */}
           <button
             onClick={() => setIsFormulaSheetOpen(true)}
             title="Math Reference Sheet"
@@ -514,29 +599,37 @@ export default function BluebookExamPage() {
       <main className="flex-1 overflow-y-auto p-4 sm:p-6">
         <div className="mx-auto h-full max-w-6xl">
           <div className="grid h-full grid-cols-1 gap-6 lg:grid-cols-2">
-            {/* LEFT COLUMN: Stimulus / Passage / Context */}
+            {/* LEFT COLUMN: Stimulus / Passage / Problem Context */}
             <div className="flex flex-col rounded-xl border border-slate-200 bg-white p-6 shadow-sm overflow-y-auto">
               <div className="mb-3 flex items-center justify-between border-b border-slate-100 pb-2">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Passage / Context
+                  {parsed.passage ? "Passage / Stimulus" : "Problem Statement"}
                 </span>
                 <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
                   {currentQuestion.difficulty || "Medium"} Difficulty
                 </span>
               </div>
+
               <div className="exam-passage flex-1">
-                {currentQuestion.text.includes("\n\n") ? (
-                  currentQuestion.text.split("\n\n")[0]
+                {parsed.passage ? (
+                  <p className="whitespace-pre-wrap">{parsed.passage}</p>
                 ) : (
-                  currentQuestion.text
+                  <div className="space-y-4">
+                    <p className="whitespace-pre-wrap font-sans text-base font-semibold text-slate-900 leading-relaxed">
+                      {parsed.prompt}
+                    </p>
+                    <div className="rounded-lg bg-sky-50/60 border border-sky-100 p-3 text-xs text-sky-900">
+                      💡 <strong>SAT Pacing Tip:</strong> Check your calculations carefully. You may use the Reference Sheet (📐) and Calculator (🧮) at any time.
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
 
-            {/* RIGHT COLUMN: Question Prompt & Choices */}
+            {/* RIGHT COLUMN: Question Prompt & Choices / Numeric Input */}
             <div className="flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-6 shadow-sm overflow-y-auto">
               <div>
-                {/* Question Header: Number & Mark for Review */}
+                {/* Header: Question Number & Mark for Review */}
                 <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-3">
                   <div className="flex items-center gap-2">
                     <span className="flex h-7 w-7 items-center justify-center rounded-md bg-[#002b49] text-sm font-bold text-white">
@@ -547,7 +640,6 @@ export default function BluebookExamPage() {
                     </span>
                   </div>
 
-                  {/* Mark for Review Button */}
                   <button
                     onClick={() => toggleFlag(currentQuestion.questionId)}
                     className={`mark-for-review-btn ${isQuestionFlagged ? "active" : ""}`}
@@ -569,63 +661,88 @@ export default function BluebookExamPage() {
                   </button>
                 </div>
 
-                {/* Question Prompt */}
-                <div className="mb-6 font-medium text-slate-900 text-[15px] leading-relaxed">
-                  {currentQuestion.text.includes("\n\n") ? (
-                    currentQuestion.text.split("\n\n").slice(1).join("\n\n")
-                  ) : (
-                    "Which choice completes the text so that it conforms to the conventions of Standard English?"
-                  )}
+                {/* Prompt Question */}
+                <div className="mb-6 font-semibold text-slate-900 text-[15px] leading-relaxed">
+                  {parsed.prompt}
                 </div>
 
-                {/* Choices (A, B, C, D) */}
-                <div className="space-y-3">
-                  {currentQuestion.choices.map((choice, cIdx) => {
-                    const letter = LETTERS[cIdx] || `${cIdx + 1}`;
-                    const isSelected = answers.get(currentQuestion.questionId) === choice.choiceId;
-                    const isEliminated = currentEliminated.has(choice.choiceId);
+                {/* A. MULTIPLE CHOICE RENDERER */}
+                {!parsed.isStudentProduced && parsed.choices.length > 0 && (
+                  <div className="space-y-3">
+                    {parsed.choices.map((choice) => {
+                      const isSelected = answers.get(currentQuestion.questionId) === choice.choiceId;
+                      const isEliminated = currentEliminated.has(choice.choiceId);
 
-                    return (
-                      <div key={choice.choiceId} className="flex items-center gap-2">
-                        <button
-                          onClick={() => {
-                            if (!isEliminated) {
-                              selectChoice(currentQuestion.questionId, choice.choiceId);
-                            }
-                          }}
-                          disabled={isEliminated}
-                          className={`bluebook-choice ${isSelected ? "selected" : ""} ${
-                            isEliminated ? "eliminated" : ""
-                          }`}
-                        >
-                          <span className="bluebook-letter-badge">{letter}</span>
-                          <span className="flex-1">{choice.text}</span>
-                        </button>
-
-                        {/* Option Eliminator Button if eliminator mode active */}
-                        {isEliminatorMode && (
+                      return (
+                        <div key={choice.choiceId} className="flex items-center gap-2">
                           <button
-                            onClick={() => toggleEliminate(currentQuestion.questionId, choice.choiceId)}
-                            title={isEliminated ? "Restore choice" : "Cross out choice"}
-                            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md border text-xs font-bold transition ${
-                              isEliminated
-                                ? "border-amber-400 bg-amber-50 text-amber-800"
-                                : "border-slate-300 bg-white text-slate-400 hover:border-slate-500 hover:text-slate-800"
+                            onClick={() => {
+                              if (!isEliminated) {
+                                selectChoice(currentQuestion.questionId, choice.choiceId);
+                              }
+                            }}
+                            disabled={isEliminated}
+                            className={`bluebook-choice ${isSelected ? "selected" : ""} ${
+                              isEliminated ? "eliminated" : ""
                             }`}
                           >
-                            {isEliminated ? "↩" : "✕"}
+                            <span className="bluebook-letter-badge">{choice.letter}</span>
+                            <span className="flex-1 font-medium">{choice.text}</span>
                           </button>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+
+                          {isEliminatorMode && (
+                            <button
+                              onClick={() => toggleEliminate(currentQuestion.questionId, choice.choiceId)}
+                              title={isEliminated ? "Restore choice" : "Cross out choice"}
+                              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md border text-xs font-bold transition ${
+                                isEliminated
+                                  ? "border-amber-400 bg-amber-50 text-amber-800"
+                                  : "border-slate-300 bg-white text-slate-400 hover:border-slate-500 hover:text-slate-800"
+                              }`}
+                            >
+                              {isEliminated ? "↩" : "✕"}
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* B. STUDENT-PRODUCED RESPONSE (GRID-IN / NUMERIC INPUT) */}
+                {parsed.isStudentProduced && (
+                  <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50/60 p-5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold uppercase tracking-wider text-[#0077c8]">
+                        Student-Produced Response (Grid-In)
+                      </span>
+                      <span className="text-[11px] text-slate-500">Type number or fraction</span>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="text"
+                        value={textAnswers.get(currentQuestion.questionId) || ""}
+                        onChange={(e) => setFreeResponseAnswer(currentQuestion.questionId, e.target.value)}
+                        placeholder="Answer (e.g. 5 or 3/4)"
+                        className="w-full max-w-xs rounded-xl border-2 border-slate-300 bg-white p-3 font-mono text-lg font-bold text-[#002b49] focus:border-[#0077c8] focus:outline-none"
+                      />
+                      {textAnswers.get(currentQuestion.questionId) && (
+                        <span className="text-xs font-bold text-emerald-600">✓ Recorded</span>
+                      )}
+                    </div>
+
+                    <p className="text-xs text-slate-500">
+                      Enter up to 5 characters, including fraction bar (/) or decimal point (.).
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Status Hint */}
               <div className="mt-6 flex items-center justify-between border-t border-slate-100 pt-3 text-xs text-slate-400">
-                <span>
-                  {isAnswered ? "Answer saved" : "Unanswered"}
+                <span className={isCurrentAnswered ? "text-emerald-700 font-semibold" : ""}>
+                  {isCurrentAnswered ? "✓ Answer saved" : "Unanswered"}
                 </span>
                 <span>Press Next when ready</span>
               </div>
@@ -636,7 +753,6 @@ export default function BluebookExamPage() {
 
       {/* 3. BLUEBOOK BOTTOM NAVIGATION BAR */}
       <footer className="bluebook-footer relative flex h-16 shrink-0 items-center justify-between px-4 sm:px-8">
-        {/* Left: Question Counter */}
         <div className="text-xs font-semibold text-slate-600 sm:text-sm">
           Question <span className="font-bold text-[#002b49]">{currentIndex + 1}</span> of{" "}
           <span className="font-bold text-[#002b49]">{questions.length}</span>
@@ -652,7 +768,6 @@ export default function BluebookExamPage() {
             <span className="text-[11px] text-slate-400">{isNavMenuOpen ? "▼" : "▲"}</span>
           </button>
 
-          {/* Question Grid Popup */}
           {isNavMenuOpen && (
             <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-30 w-72 sm:w-80 rounded-2xl border border-slate-200 bg-white p-4 shadow-xl">
               <div className="flex items-center justify-between pb-2 border-b border-slate-100 text-xs">

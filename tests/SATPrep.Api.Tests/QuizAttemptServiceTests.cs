@@ -64,6 +64,65 @@ public class QuizAttemptServiceTests
             a => Assert.False(a.IsCorrect));
     }
 
+    [Fact]
+    public async Task GetResultByIdAsync_ReturnsFullGradedReport()
+    {
+        var context = _fixture.GetDbContext();
+        var service = CreateService(context);
+        var (userId, quizId, q1, q2) = await SeedQuizAsync(context);
+
+        var attempt = await service.StartAsync(userId, quizId);
+        Assert.NotNull(attempt);
+
+        var correctChoice = q1.Choices.First(c => c.IsCorrect);
+        var wrongChoice = q2.Choices.First(c => !c.IsCorrect);
+
+        await service.CompleteAsync(attempt.QuizAttemptId, userId, new CompleteQuizAttemptDto
+        {
+            TimeTakenSeconds = 120,
+            Answers = new List<AnswerCreateDto>
+            {
+                new() { QuestionId = q1.QuestionId, SelectedChoiceId = correctChoice.ChoiceId },
+                new() { QuestionId = q2.QuestionId, SelectedChoiceId = wrongChoice.ChoiceId }
+            }
+        });
+
+        var result = await service.GetResultByIdAsync(attempt.QuizAttemptId, userId);
+        Assert.NotNull(result);
+        Assert.Equal(50, result.Score);
+        Assert.Equal(1, result.PointsCorrect);
+        Assert.Equal(2, result.Questions.Count());
+    }
+
+    [Fact]
+    public async Task GetMistakesAsync_ReturnsOnlyIncorrectQuestions()
+    {
+        var context = _fixture.GetDbContext();
+        var service = CreateService(context);
+        var (userId, quizId, q1, q2) = await SeedQuizAsync(context);
+
+        var attempt = await service.StartAsync(userId, quizId);
+        Assert.NotNull(attempt);
+
+        var correctChoice = q1.Choices.First(c => c.IsCorrect);
+        var wrongChoice = q2.Choices.First(c => !c.IsCorrect);
+
+        await service.CompleteAsync(attempt.QuizAttemptId, userId, new CompleteQuizAttemptDto
+        {
+            TimeTakenSeconds = 100,
+            Answers = new List<AnswerCreateDto>
+            {
+                new() { QuestionId = q1.QuestionId, SelectedChoiceId = correctChoice.ChoiceId },
+                new() { QuestionId = q2.QuestionId, SelectedChoiceId = wrongChoice.ChoiceId }
+            }
+        });
+
+        var mistakes = await service.GetMistakesAsync(userId);
+        Assert.Single(mistakes);
+        Assert.Equal(q2.QuestionId, mistakes[0].QuestionId);
+        Assert.Equal(wrongChoice.ChoiceId, mistakes[0].SelectedChoiceId);
+    }
+
     private static QuizAttemptService CreateService(AppDbContext context)
     {
         return new QuizAttemptService(

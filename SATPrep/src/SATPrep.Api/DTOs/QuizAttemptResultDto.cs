@@ -37,3 +37,17 @@ public record ScoreDetailDto(
     int Correct,
     int Total,
     int Percentage);
+
+public record UserMistakeDto(
+    long QuestionId,
+    string Text,
+    string Difficulty,
+    long TopicId,
+    string TopicName,
+    string SubjectName,
+    IEnumerable<ChoiceGetDto> Choices,
+    long? SelectedChoiceId,
+    long? CorrectChoiceId,
+    DateTime AnsweredAt,
+    long QuizId,
+    string QuizTitle);

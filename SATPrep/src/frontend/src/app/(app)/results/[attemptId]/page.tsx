@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
   getAttempt,
+  getQuizAttemptResult,
   getQuizTakeData,
   type QuizAttemptResultDto,
   type QuestionResultDto,
@@ -63,72 +64,19 @@ export default function SatScoreReportPage() {
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const attemptData = await getAttempt(Number(attemptId));
-
-      if (attemptData.completedAt == null) {
-        setResult(null);
-        setError("This attempt has not been completed yet.");
-        setLoading(false);
-        return;
-      }
-
-      const takeData = await getQuizTakeData(attemptData.quizId);
-
-      const questions: QuestionResultDto[] = takeData.questions.map((tq) => {
-        const answer = attemptData.answers.find((a) => a.questionId === tq.questionId);
-        return {
-          questionId: tq.questionId,
-          text: tq.text,
-          difficulty: tq.difficulty,
-          topicId: 0,
-          topicName: "",
-          subjectName: "",
-          choices: tq.choices,
-          selectedChoiceId: answer?.selectedChoiceId ?? null,
-          correctChoiceId: null,
-          isCorrect: answer?.isCorrect ?? false,
-        };
-      });
-
-      const merged: QuizAttemptResultDto = {
-        quizAttemptId: attemptData.quizAttemptId,
-        quizId: attemptData.quizId,
-        quizTitle: takeData.title,
-        score: attemptData.score,
-        pointsCorrect: attemptData.pointsCorrect,
-        totalQuestions: attemptData.totalQuestions,
-        timeTakenSeconds: attemptData.timeTakenSeconds,
-        startedAt: attemptData.startedAt,
-        completedAt: attemptData.completedAt,
-        questions,
-        sectionBreakdown: [],
-      };
-
-      setResult(merged);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load score report.");
-    } finally {
-      setLoading(false);
-    }
-  }, [attemptId]);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
+      const fullResult = await getQuizAttemptResult(Number(attemptId));
+      setResult(fullResult);
+    } catch {
       try {
         const attemptData = await getAttempt(Number(attemptId));
-
         if (attemptData.completedAt == null) {
-          if (!cancelled) {
-            setResult(null);
-            setError("This test attempt is in progress or incomplete.");
-            setLoading(false);
-          }
+          setResult(null);
+          setError("This attempt has not been completed yet.");
+          setLoading(false);
           return;
         }
 
         const takeData = await getQuizTakeData(attemptData.quizId);
-
         const questions: QuestionResultDto[] = takeData.questions.map((tq) => {
           const answer = attemptData.answers.find((a) => a.questionId === tq.questionId);
           return {
@@ -158,22 +106,34 @@ export default function SatScoreReportPage() {
           questions,
           sectionBreakdown: [],
         };
+        setResult(merged);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load score report.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [attemptId]);
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const fullResult = await getQuizAttemptResult(Number(attemptId));
         if (!cancelled) {
-          setResult(merged);
+          setResult(fullResult);
           setLoading(false);
         }
-      } catch (err) {
+      } catch {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Failed to load score report.");
-          setLoading(false);
+          fetchData();
         }
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [attemptId]);
+  }, [attemptId, fetchData]);
 
   if (loading) {
     return (

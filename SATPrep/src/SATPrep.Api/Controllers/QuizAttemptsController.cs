@@ -40,6 +40,29 @@ public class QuizAttemptsController : ApiControllerBase
         return Ok(attempt);
     }
 
+    [HttpGet("{id:long}/result")]
+    public async Task<ActionResult<QuizAttemptResultDto>> GetResultById(long id)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized();
+
+        var result = await _attemptService.GetResultByIdAsync(id, userId);
+        if (result is null)
+            return NotFound("Attempt not found, not completed, or unauthorized.");
+
+        return Ok(result);
+    }
+
+    [HttpGet("mistakes")]
+    public async Task<ActionResult<List<UserMistakeDto>>> GetMistakes()
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized();
+
+        var mistakes = await _attemptService.GetMistakesAsync(userId);
+        return Ok(mistakes);
+    }
+
     [HttpPost]
     public async Task<ActionResult<QuizAttemptGetDto>> Start([FromBody] CreateQuizAttemptDto dto)
     {

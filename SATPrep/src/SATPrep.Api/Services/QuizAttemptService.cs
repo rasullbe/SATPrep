@@ -33,6 +33,57 @@ public class QuizAttemptService : IQuizAttemptService
         return attempt?.ToGetDto();
     }
 
+    public async Task<QuizAttemptResultDto?> GetResultByIdAsync(long attemptId, long userId)
+    {
+        var attempt = await _attemptRepository.GetByIdAsync(attemptId);
+        if (attempt is null || attempt.UserId != userId)
+            return null;
+
+        if (attempt.Status != AttemptStatus.Completed && attempt.CompletedAt == null)
+            return null;
+
+        return await BuildResultDtoAsync(attempt);
+    }
+
+    public async Task<List<UserMistakeDto>> GetMistakesAsync(long userId)
+    {
+        var attempts = await _attemptRepository.GetByUserAsync(userId);
+        var completedAttempts = attempts.Where(a => a.Status == AttemptStatus.Completed || a.CompletedAt != null);
+
+        var mistakes = new List<UserMistakeDto>();
+
+        foreach (var attempt in completedAttempts)
+        {
+            var quiz = await _quizRepository.GetByIdAsync(attempt.QuizId);
+            var incorrectAnswers = attempt.Answers.Where(a => !a.IsCorrect);
+
+            foreach (var answer in incorrectAnswers)
+            {
+                var question = await _questionRepository.GetByIdAsync(answer.QuestionId);
+                if (question is null) continue;
+
+                var correctChoice = question.Choices.FirstOrDefault(c => c.IsCorrect);
+
+                mistakes.Add(new UserMistakeDto(
+                    question.QuestionId,
+                    question.Text,
+                    question.Difficulty.ToString(),
+                    question.TopicId,
+                    question.Topic?.Name ?? "",
+                    question.Topic?.Subject?.Name ?? "",
+                    question.Choices.Select(c => new ChoiceGetDto(c.ChoiceId, c.Text)).ToArray(),
+                    answer.SelectedChoiceId,
+                    correctChoice?.ChoiceId,
+                    answer.AnsweredAt,
+                    attempt.QuizId,
+                    quiz?.Title ?? ""
+                ));
+            }
+        }
+
+        return mistakes.OrderByDescending(m => m.AnsweredAt).ToList();
+    }
+
     public async Task<List<QuizAttemptGetDto>> GetAllAsync()
     {
         var attempts = await _attemptRepository.GetAllAsync();

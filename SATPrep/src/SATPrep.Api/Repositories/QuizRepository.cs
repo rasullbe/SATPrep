@@ -16,7 +16,13 @@ public class QuizRepository : IQuizRepository
     public async Task<Quiz?> GetByIdAsync(long id)
     {
         return await _context.Quizzes
-            .Include(q => q.QuizQuestions).ThenInclude(qq => qq.Question)
+            .Include(q => q.QuizQuestions)
+                .ThenInclude(qq => qq.Question)
+                    .ThenInclude(q => q.Choices)
+            .Include(q => q.QuizQuestions)
+                .ThenInclude(qq => qq.Question)
+                    .ThenInclude(q => q.Topic)
+                        .ThenInclude(t => t.Subject)
             .FirstOrDefaultAsync(q => q.QuizId == id);
     }
 
@@ -30,6 +36,12 @@ public class QuizRepository : IQuizRepository
     {
         return await _context.Quizzes
             .Include(q => q.QuizQuestions)
+                .ThenInclude(qq => qq.Question)
+                    .ThenInclude(q => q.Choices)
+            .Include(q => q.QuizQuestions)
+                .ThenInclude(qq => qq.Question)
+                    .ThenInclude(q => q.Topic)
+                        .ThenInclude(t => t.Subject)
             .ToListAsync();
     }
 
@@ -38,6 +50,8 @@ public class QuizRepository : IQuizRepository
         return await _context.Quizzes
             .Where(q => q.CreatedById == creatorId)
             .Include(q => q.QuizQuestions)
+                .ThenInclude(qq => qq.Question)
+                    .ThenInclude(q => q.Choices)
             .ToListAsync();
     }
 
@@ -46,6 +60,12 @@ public class QuizRepository : IQuizRepository
         return await _context.Quizzes
             .Where(q => q.IsPublished)
             .Include(q => q.QuizQuestions)
+                .ThenInclude(qq => qq.Question)
+                    .ThenInclude(q => q.Choices)
+            .Include(q => q.QuizQuestions)
+                .ThenInclude(qq => qq.Question)
+                    .ThenInclude(q => q.Topic)
+                        .ThenInclude(t => t.Subject)
             .ToListAsync();
     }
 

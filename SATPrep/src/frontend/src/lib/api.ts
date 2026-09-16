@@ -258,6 +258,21 @@ export interface ChoiceGetDto {
   text: string;
 }
 
+export interface UserMistakeDto {
+  questionId: number;
+  text: string;
+  difficulty: string;
+  topicId: number;
+  topicName: string;
+  subjectName: string;
+  choices: ChoiceGetDto[];
+  selectedChoiceId: number | null;
+  correctChoiceId: number | null;
+  answeredAt: string;
+  quizId: number;
+  quizTitle: string;
+}
+
 export interface SectionScoreDto {
   subjectName: string;
   sections: ScoreDetailDto[];
@@ -379,6 +394,14 @@ export async function completeQuizAttempt(
 
 export async function getAttempt(attemptId: number): Promise<QuizAttemptGetDto> {
   return apiFetch<QuizAttemptGetDto>(`/api/quiz-attempts/${attemptId}`);
+}
+
+export async function getQuizAttemptResult(attemptId: number): Promise<QuizAttemptResultDto> {
+  return apiFetch<QuizAttemptResultDto>(`/api/quiz-attempts/${attemptId}/result`);
+}
+
+export async function getMistakes(): Promise<UserMistakeDto[]> {
+  return apiFetch<UserMistakeDto[]>("/api/quiz-attempts/mistakes");
 }
 
 export async function getAttempts(): Promise<QuizAttemptGetDto[]> {

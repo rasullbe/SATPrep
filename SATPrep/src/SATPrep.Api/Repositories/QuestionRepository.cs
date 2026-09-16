@@ -17,6 +17,7 @@ public class QuestionRepository : IQuestionRepository
     {
         return await _context.Questions
             .Include(q => q.Choices)
+            .Include(q => q.Topic).ThenInclude(t => t.Subject)
             .Include(q => q.QuestionTags).ThenInclude(qt => qt.Tag)
             .FirstOrDefaultAsync(q => q.QuestionId == id);
     }
@@ -25,6 +26,7 @@ public class QuestionRepository : IQuestionRepository
     {
         return await _context.Questions
             .Include(q => q.Choices)
+            .Include(q => q.Topic).ThenInclude(t => t.Subject)
             .Include(q => q.QuestionTags).ThenInclude(qt => qt.Tag)
             .ToListAsync();
     }
@@ -34,6 +36,7 @@ public class QuestionRepository : IQuestionRepository
         return await _context.Questions
             .Where(q => q.TopicId == topicId)
             .Include(q => q.Choices)
+            .Include(q => q.Topic).ThenInclude(t => t.Subject)
             .Include(q => q.QuestionTags).ThenInclude(qt => qt.Tag)
             .ToListAsync();
     }
