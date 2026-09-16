@@ -20,7 +20,10 @@ public static class QuizSeeder
             Title = "Digital SAT Full Practice Test",
             Description = "Complete practice exam with Reading and Writing + Math sections",
             CreatedById = creator.UserId,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            TimeLimitMinutes = 134,
+            ShuffleQuestions = true,
+            IsPublished = true
         };
 
         // Section-specific quizzes
@@ -29,7 +32,10 @@ public static class QuizSeeder
             Title = "Reading and Writing - Module 1",
             Description = "Reading and Writing practice module with mixed domains",
             CreatedById = creator.UserId,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            TimeLimitMinutes = 32,
+            ShuffleQuestions = true,
+            IsPublished = true
         };
 
         var quiz3 = new Quiz
@@ -37,7 +43,10 @@ public static class QuizSeeder
             Title = "Math - Domain Practice: Algebra",
             Description = "Focused algebra problem set",
             CreatedById = creator.UserId,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            TimeLimitMinutes = 15,
+            ShuffleQuestions = false,
+            IsPublished = true
         };
 
         await context.Quizzes.AddAsync(quiz1);

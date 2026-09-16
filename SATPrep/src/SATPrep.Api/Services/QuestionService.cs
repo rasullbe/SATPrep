@@ -35,8 +35,8 @@ public class QuestionService : IQuestionService
 
     public async Task<List<QuestionGetDto>> GetByTopicAsync(long topicId)
     {
-        var questions = await _questionRepository.GetAllAsync();
-        return questions.Where(q => q.TopicId == topicId).Select(q => q.ToGetDto()).ToList();
+        var questions = await _questionRepository.GetByTopicAsync(topicId);
+        return questions.Select(q => q.ToGetDto()).ToList();
     }
 
     public async Task<QuestionGetDto?> CreateAsync(QuestionCreateDto createDto)
@@ -76,6 +76,7 @@ public class QuestionService : IQuestionService
         if (question is null)
             return false;
 
+        _questionRepository.Remove(question);
         return await _questionRepository.SaveChangesAsync();
     }
 

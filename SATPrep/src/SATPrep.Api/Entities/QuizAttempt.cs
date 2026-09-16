@@ -16,7 +16,14 @@ public class QuizAttempt
     public DateTime StartedAt { get; set; } = DateTime.UtcNow;
     public DateTime? CompletedAt { get; set; }
 
+    public AttemptStatus Status { get; set; } = AttemptStatus.InProgress;
+
     public int Score { get; set; }
+
+    public int PointsCorrect { get; set; }
+    public int TotalQuestions { get; set; }
+
+    public int? TimeTakenSeconds { get; set; }
 
     public ICollection<Answer> Answers { get; set; } = new List<Answer>();
 }

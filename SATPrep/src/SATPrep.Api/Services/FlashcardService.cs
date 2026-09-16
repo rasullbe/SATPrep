@@ -27,8 +27,8 @@ public class FlashcardService : IFlashcardService
 
     public async Task<List<FlashcardGetDto>> GetByUserAsync(long userId)
     {
-        var flashcards = await _flashcardRepository.GetAllAsync();
-        return flashcards.Where(f => f.UserId == userId).Select(f => f.ToGetDto()).ToList();
+        var flashcards = await _flashcardRepository.GetByUserAsync(userId);
+        return flashcards.Select(f => f.ToGetDto()).ToList();
     }
 
     public async Task<FlashcardGetDto?> CreateAsync(FlashcardCreateDto createDto)
@@ -68,16 +68,37 @@ public class FlashcardService : IFlashcardService
         if (flashcard is null)
             return false;
 
+        _flashcardRepository.Remove(flashcard);
         return await _flashcardRepository.SaveChangesAsync();
     }
 
-    public async Task<bool> UpdateNextReviewAsync(long flashcardId, DateTime nextReview)
+    public async Task<FlashcardGetDto?> ReviewAsync(long flashcardId, FlashcardReviewDto reviewDto)
     {
         var flashcard = await _flashcardRepository.GetByIdAsync(flashcardId);
         if (flashcard is null)
-            return false;
+            return null;
+
+        var quality = Math.Clamp(reviewDto.Quality, 0, 5);
+
+        DateTime nextReview;
+        if (quality >= 3)
+        {
+            var daysSinceLast = flashcard.NextReview.HasValue
+                ? (DateTime.UtcNow - flashcard.NextReview.Value).Days
+                : 1;
+            var interval = Math.Max(daysSinceLast, 1) * quality;
+            nextReview = DateTime.UtcNow.AddDays(interval);
+        }
+        else
+        {
+            nextReview = DateTime.UtcNow.AddMinutes(10);
+        }
 
         flashcard.NextReview = nextReview;
-        return await _flashcardRepository.SaveChangesAsync();
+
+        if (!await _flashcardRepository.SaveChangesAsync())
+            return null;
+
+        return flashcard.ToGetDto();
     }
 }

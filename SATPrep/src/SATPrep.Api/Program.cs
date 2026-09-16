@@ -1,58 +1,64 @@
-using Microsoft.EntityFrameworkCore;
+using SATPrep.Api.Configurations;
 using SATPrep.Api.Data;
-using SATPrep.Api.Data.DataSeeder;
 using SATPrep.Api.Middlewares;
-using SATPrep.Api.Repositories;
-using SATPrep.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-
+// Controller services
 builder.Services.AddControllers();
 
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+// Database
+builder.Services.AddSatPrepDatabase(builder.Configuration);
 
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+// CORS
+builder.Services.AddSatPrepCors(builder.Configuration);
 
-builder.Services.AddScoped<IUserRepository, UserRepository>();
-builder.Services.AddScoped<IQuizRepository, QuizRepository>();
-builder.Services.AddScoped<IQuestionRepository, QuestionRepository>();
-builder.Services.AddScoped<ISubjectRepository, SubjectRepository>();
-builder.Services.AddScoped<ITopicRepository, TopicRepository>();
-builder.Services.AddScoped<IFlashcardRepository, FlashcardRepository>();
-builder.Services.AddScoped<IQuizAttemptRepository, QuizAttemptRepository>();
-builder.Services.AddScoped<ITagRepository, TagRepository>();
-builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<IQuizService, QuizService>();
-builder.Services.AddScoped<IQuestionService, QuestionService>();
-builder.Services.AddScoped<ISubjectService, SubjectService>();
-builder.Services.AddScoped<ITopicService, TopicService>();
-builder.Services.AddScoped<IFlashcardService, FlashcardService>();
-builder.Services.AddScoped<IQuizAttemptService, QuizAttemptService>();
-builder.Services.AddScoped<ITagService, TagService>();
+// JWT Auth + Authorization policies
+builder.Services.AddSatPrepAuth(builder.Configuration);
+
+// Domain services + repositories (DI)
+builder.Services.AddSatPrepServices();
+
+// Health checks
+builder.Services.AddSatPrepHealthChecks();
+
+// Swagger / OpenAPI
+builder.Services.AddSatPrepOpenApi();
 
 var app = builder.Build();
 
-app.UseMiddleware<ExceptionMiddleware>();
+// Apply EF Core migrations on startup
+await DatabaseMigrator.ApplyAsync(app.Services);
 
+// Seed sample data (idempotent — skips if data already exists)
 using (var scope = app.Services.CreateScope())
 {
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    await DataSeeder.SeedAllAsync(db);
+    await SATPrep.Api.Data.DataSeeder.DataSeeder.SeedAllAsync(scope.ServiceProvider.GetRequiredService<SATPrep.Api.Data.AppDbContext>());
 }
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+// Global exception handling (outermost)
+app.UseMiddleware<ExceptionMiddleware>();
 
 app.UseHttpsRedirection();
+
+app.UseCors("Frontend");
+
+app.UseMiddleware<SecurityHeadersMiddleware>();
+
+// CSRF double-submit cookie protection (before auth, but after static/CORS)
+app.UseMiddleware<CsrfMiddleware>();
+
+app.UseAuthentication();
 app.UseAuthorization();
+
 app.MapControllers();
+
+app.MapHealthChecks("/health").AllowAnonymous();
+
+// Configure the HTTP request pipeline for development tooling.
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
+}
 
 app.Run();

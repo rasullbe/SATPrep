@@ -29,9 +29,21 @@ public class TopicRepository : ITopicRepository
         return await _context.Topics.ToListAsync();
     }
 
+    public async Task<List<Topic>> GetBySubjectAsync(long subjectId)
+    {
+        return await _context.Topics
+            .Where(t => t.SubjectId == subjectId)
+            .ToListAsync();
+    }
+
     public async Task AddAsync(Topic topic)
     {
         await _context.Topics.AddAsync(topic);
+    }
+
+    public void Remove(Topic topic)
+    {
+        _context.Topics.Remove(topic);
     }
 
     public async Task<bool> SaveChangesAsync()

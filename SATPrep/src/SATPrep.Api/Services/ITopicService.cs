@@ -9,6 +9,6 @@ public interface ITopicService
     Task<List<TopicGetDto>> GetAllAsync();
     Task<List<TopicGetDto>> GetBySubjectAsync(long subjectId);
     Task<TopicGetDto?> CreateAsync(TopicCreateDto createDto);
-    Task<TopicGetDto?> UpdateAsync(long topicId, TopicCreateDto updateDto);
+    Task<TopicGetDto?> UpdateAsync(long topicId, TopicUpdateDto updateDto);
     Task<bool> DeleteAsync(long topicId);
 }

@@ -1,0 +1,303 @@
+@import "tailwindcss";
+
+@theme {
+  /* College Board & Digital SAT Bluebook Palette */
+  --color-cb-navy-950: #001726;
+  --color-cb-navy-900: #002238;
+  --color-cb-navy-800: #002b49; /* Official College Board Navy */
+  --color-cb-navy-700: #0a3d66;
+  --color-cb-navy-600: #12538a;
+  
+  /* Bluebook Digital SAT Azure & Accents */
+  --color-bluebook-50: #eff8ff;
+  --color-bluebook-100: #dbeafe;
+  --color-bluebook-200: #bfdbfe;
+  --color-bluebook-500: #0077c8; /* Digital SAT Primary Blue */
+  --color-bluebook-600: #0060a8;
+  --color-bluebook-700: #004d87;
+  
+  /* Clean Slate & Paper Canvas */
+  --color-canvas: #f8fafc;
+  --color-paper: #ffffff;
+  --color-paper-subtle: #f1f5f9;
+  --color-paper-muted: #e2e8f0;
+  --color-border-subtle: #cbd5e1;
+  --color-border-focus: #0077c8;
+
+  /* Score & Achievement Accents */
+  --color-sat-gold: #d97706;
+  --color-sat-gold-light: #fef3c7;
+  --color-sat-green: #15803d;
+  --color-sat-green-light: #dcfce7;
+  --color-sat-red: #dc2626;
+  --color-sat-red-light: #fee2e2;
+
+  --font-sans: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-serif: var(--font-fraunces), Georgia, "Times New Roman", serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", monospace;
+
+  --shadow-bluebook: 0 1px 3px rgba(0, 43, 73, 0.08), 0 1px 2px rgba(0, 43, 73, 0.04);
+  --shadow-bluebook-md: 0 4px 6px -1px rgba(0, 43, 73, 0.08), 0 2px 4px -1px rgba(0, 43, 73, 0.04);
+  --shadow-bluebook-lg: 0 10px 15px -3px rgba(0, 43, 73, 0.1), 0 4px 6px -2px rgba(0, 43, 73, 0.05);
+}
+
+body {
+  background-color: #f8fafc;
+  color: #0f172a;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@layer base {
+  h1, h2, h3 {
+    letter-spacing: -0.015em;
+  }
+}
+
+@layer components {
+  /* Bluebook Exam Top Navigation Bar */
+  .bluebook-header {
+    background-color: #ffffff;
+    border-bottom: 1px solid #cbd5e1;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  }
+
+  /* Bluebook Bottom Navigation Bar */
+  .bluebook-footer {
+    background-color: #ffffff;
+    border-top: 1px solid #cbd5e1;
+    box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.03);
+  }
+
+  /* Question Stimulus / Passage Container */
+  .exam-passage {
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    font-family: Georgia, "Times New Roman", serif;
+    line-height: 1.75;
+    color: #1e293b;
+    font-size: 1.0625rem;
+  }
+
+  /* Exam Prompt Container */
+  .exam-prompt {
+    font-size: 1.0625rem;
+    line-height: 1.65;
+    color: #0f172a;
+    font-weight: 400;
+  }
+
+  /* Bluebook Choice Radio Button */
+  .bluebook-choice {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.875rem;
+    width: 100%;
+    text-align: left;
+    padding: 0.875rem 1rem;
+    border-radius: 0.5rem;
+    border: 1.5px solid #cbd5e1;
+    background-color: #ffffff;
+    color: #1e293b;
+    font-size: 0.9375rem;
+    line-height: 1.5;
+    transition: all 0.15s ease-in-out;
+  }
+
+  .bluebook-choice:hover:not(:disabled) {
+    border-color: #0077c8;
+    background-color: #f0f7ff;
+  }
+
+  .bluebook-choice.selected {
+    border-color: #0077c8;
+    background-color: #e0f2fe;
+    font-weight: 500;
+    color: #004d87;
+  }
+
+  .bluebook-choice.eliminated {
+    opacity: 0.45;
+    text-decoration: line-through;
+    background-color: #f8fafc;
+  }
+
+  /* A, B, C, D Letter Badge */
+  .bluebook-letter-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 9999px;
+    border: 1.5px solid #94a3b8;
+    background-color: #ffffff;
+    color: #475569;
+    font-size: 0.875rem;
+    font-weight: 600;
+    flex-shrink: 0;
+    transition: all 0.15s ease-in-out;
+  }
+
+  .bluebook-choice.selected .bluebook-letter-badge {
+    border-color: #0077c8;
+    background-color: #0077c8;
+    color: #ffffff;
+  }
+
+  /* Mark for Review Button */
+  .mark-for-review-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    border-radius: 0.375rem;
+    border: 1px solid #cbd5e1;
+    background-color: #ffffff;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .mark-for-review-btn:hover {
+    background-color: #f1f5f9;
+    color: #0f172a;
+  }
+
+  .mark-for-review-btn.active {
+    background-color: #fef3c7;
+    border-color: #f59e0b;
+    color: #b45309;
+    font-weight: 600;
+  }
+
+  /* Buttons */
+  .btn-bluebook {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    border-radius: 9999px;
+    background-color: #0077c8;
+    color: #ffffff;
+    transition: all 0.15s ease-in-out;
+    box-shadow: 0 1px 2px rgba(0, 119, 200, 0.2);
+  }
+
+  .btn-bluebook:hover:not(:disabled) {
+    background-color: #005a9c;
+    box-shadow: 0 2px 4px rgba(0, 119, 200, 0.3);
+  }
+
+  .btn-bluebook:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .btn-bluebook-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    border-radius: 9999px;
+    border: 1.5px solid #cbd5e1;
+    background-color: #ffffff;
+    color: #334155;
+    transition: all 0.15s ease-in-out;
+  }
+
+  .btn-bluebook-secondary:hover:not(:disabled) {
+    background-color: #f1f5f9;
+    border-color: #94a3b8;
+    color: #0f172a;
+  }
+
+  .btn-bluebook-secondary:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  /* Cards */
+  .sat-card {
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0, 43, 73, 0.05);
+  }
+
+  .sat-card-interactive {
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0, 43, 73, 0.05);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .sat-card-interactive:hover {
+    border-color: #0077c8;
+    box-shadow: 0 8px 20px -4px rgba(0, 119, 200, 0.12);
+    transform: translateY(-1px);
+  }
+
+  /* Badges */
+  .badge-sat-navy {
+    background-color: #002b49;
+    color: #ffffff;
+    font-weight: 600;
+    font-size: 0.75rem;
+    padding: 0.25rem 0.625rem;
+    border-radius: 9999px;
+  }
+
+  .badge-sat-blue {
+    background-color: #eff8ff;
+    color: #0077c8;
+    border: 1px solid #bfdbfe;
+    font-weight: 600;
+    font-size: 0.75rem;
+    padding: 0.25rem 0.625rem;
+    border-radius: 9999px;
+  }
+
+  .badge-sat-score {
+    background-color: #002b49;
+    color: #fef3c7;
+    border: 1px solid #d97706;
+    font-weight: 700;
+    font-size: 0.8125rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    letter-spacing: 0.02em;
+  }
+
+  /* 3D Flip Card for Flashcards */
+  .perspective-1000 {
+    perspective: 1000px;
+  }
+
+  .transform-style-3d {
+    transform-style: preserve-3d;
+  }
+
+  .backface-hidden {
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+
+  .rotate-y-180 {
+    transform: rotateY(180deg);
+  }
+}

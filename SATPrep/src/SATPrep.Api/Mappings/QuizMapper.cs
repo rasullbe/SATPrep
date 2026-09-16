@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Collections.Generic;
 using SATPrep.Api.Entities;
 using SATPrep.Api.DTOs;
 
@@ -17,7 +18,10 @@ public static class QuizMapper
             Description = dto.Description ?? string.Empty,
             CreatedById = dto.CreatedById,
             CreatedAt = DateTime.UtcNow,
-            QuizQuestions = dto.QuestionIds?.Select((qid, idx) => new QuizQuestion { QuestionId = qid, Order = idx }).ToList() ?? new System.Collections.Generic.List<QuizQuestion>()
+            TimeLimitMinutes = dto.TimeLimitMinutes,
+            ShuffleQuestions = dto.ShuffleQuestions,
+            IsPublished = dto.IsPublished,
+            QuizQuestions = dto.QuestionIds?.Select((qid, idx) => new QuizQuestion { QuestionId = qid, Order = idx }).ToList() ?? new List<QuizQuestion>()
         };
 
         foreach (var qq in quiz.QuizQuestions)
@@ -30,7 +34,16 @@ public static class QuizMapper
     {
         if (entity is null) throw new ArgumentNullException(nameof(entity));
 
-        return new QuizGetDto(entity.QuizId, entity.Title ?? string.Empty, entity.Description ?? string.Empty, entity.CreatedById, entity.CreatedAt);
+        return new QuizGetDto(
+            entity.QuizId,
+            entity.Title ?? string.Empty,
+            entity.Description ?? string.Empty,
+            entity.CreatedById,
+            entity.CreatedAt,
+            entity.TimeLimitMinutes,
+            entity.ShuffleQuestions,
+            entity.IsPublished,
+            entity.QuizQuestions?.Count ?? 0);
     }
 
     public static QuizDetailGetDto ToDetailGetDto(this Quiz entity)
@@ -38,9 +51,43 @@ public static class QuizMapper
         if (entity is null) throw new ArgumentNullException(nameof(entity));
 
         var questions = entity.QuizQuestions?.Select(qq => qq.Question).Where(q => q != null)
-            .Select(q => new QuestionSummaryDto(q.QuestionId, q.Text ?? string.Empty, q.Difficulty)) ?? System.Array.Empty<QuestionSummaryDto>();
+            .Select(q => new QuestionSummaryDto(q.QuestionId, q.Text ?? string.Empty, q.Difficulty))
+            ?? Array.Empty<QuestionSummaryDto>();
 
-        return new QuizDetailGetDto(entity.QuizId, entity.Title ?? string.Empty, entity.Description ?? string.Empty, entity.CreatedById, entity.CreatedAt, questions);
+        return new QuizDetailGetDto(
+            entity.QuizId,
+            entity.Title ?? string.Empty,
+            entity.Description ?? string.Empty,
+            entity.CreatedById,
+            entity.CreatedAt,
+            entity.TimeLimitMinutes,
+            entity.ShuffleQuestions,
+            entity.IsPublished,
+            questions);
+    }
+
+    public static QuizTakeDto ToTakeDto(this Quiz entity)
+    {
+        if (entity is null) throw new ArgumentNullException(nameof(entity));
+
+        var questions = entity.QuizQuestions?
+            .OrderBy(qq => qq.Order)
+            .Select(qq => qq.Question)
+            .Where(q => q != null)
+            .Select(q => new TakeQuestionDto(
+                q.QuestionId,
+                q.Text ?? string.Empty,
+                q.Difficulty.ToString(),
+                q.Choices?.Select(c => c.ToGetDto()) ?? Array.Empty<ChoiceGetDto>()))
+            ?? Array.Empty<TakeQuestionDto>();
+
+        return new QuizTakeDto(
+            entity.QuizId,
+            entity.Title ?? string.Empty,
+            entity.Description ?? string.Empty,
+            entity.TimeLimitMinutes,
+            entity.QuizQuestions?.Count ?? 0,
+            questions);
     }
 
     public static void UpdateFrom(this Quiz entity, QuizUpdateDto dto)
@@ -53,5 +100,14 @@ public static class QuizMapper
 
         if (dto.Description is not null)
             entity.Description = dto.Description;
+
+        if (dto.TimeLimitMinutes is not null)
+            entity.TimeLimitMinutes = dto.TimeLimitMinutes;
+
+        if (dto.ShuffleQuestions is not null)
+            entity.ShuffleQuestions = dto.ShuffleQuestions.Value;
+
+        if (dto.IsPublished is not null)
+            entity.IsPublished = dto.IsPublished.Value;
     }
 }

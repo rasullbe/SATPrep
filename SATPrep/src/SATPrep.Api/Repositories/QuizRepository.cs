@@ -15,7 +15,9 @@ public class QuizRepository : IQuizRepository
 
     public async Task<Quiz?> GetByIdAsync(long id)
     {
-        return await _context.Quizzes.FindAsync(id);
+        return await _context.Quizzes
+            .Include(q => q.QuizQuestions).ThenInclude(qq => qq.Question)
+            .FirstOrDefaultAsync(q => q.QuizId == id);
     }
 
     public async Task<Quiz?> GetByTitleAsync(string title)
@@ -26,7 +28,25 @@ public class QuizRepository : IQuizRepository
 
     public async Task<List<Quiz>> GetAllAsync()
     {
-        return await _context.Quizzes.ToListAsync();
+        return await _context.Quizzes
+            .Include(q => q.QuizQuestions)
+            .ToListAsync();
+    }
+
+    public async Task<List<Quiz>> GetByCreatorAsync(long creatorId)
+    {
+        return await _context.Quizzes
+            .Where(q => q.CreatedById == creatorId)
+            .Include(q => q.QuizQuestions)
+            .ToListAsync();
+    }
+
+    public async Task<List<Quiz>> GetPublishedAsync()
+    {
+        return await _context.Quizzes
+            .Where(q => q.IsPublished)
+            .Include(q => q.QuizQuestions)
+            .ToListAsync();
     }
 
     public async Task AddAsync(Quiz quiz)
@@ -34,13 +54,13 @@ public class QuizRepository : IQuizRepository
         await _context.Quizzes.AddAsync(quiz);
     }
 
-    public async Task<bool> SaveChangesAsync()
-    {
-        return await _context.SaveChangesAsync() > 0;
-    }
-
     public void Remove(Quiz quiz)
     {
         _context.Quizzes.Remove(quiz);
+    }
+
+    public async Task<bool> SaveChangesAsync()
+    {
+        return await _context.SaveChangesAsync() > 0;
     }
 }

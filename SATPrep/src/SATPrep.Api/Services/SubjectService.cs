@@ -48,7 +48,7 @@ public class SubjectService : ISubjectService
         return subject.ToGetDto();
     }
 
-    public async Task<SubjectGetDto?> UpdateAsync(long subjectId, SubjectCreateDto updateDto)
+    public async Task<SubjectGetDto?> UpdateAsync(long subjectId, SubjectUpdateDto updateDto)
     {
         if (updateDto is null)
             throw new ArgumentNullException(nameof(updateDto));
@@ -57,7 +57,8 @@ public class SubjectService : ISubjectService
         if (subject is null)
             return null;
 
-        subject.Name = updateDto.Name?.Trim() ?? string.Empty;
+        if (updateDto.Name is not null)
+            subject.Name = updateDto.Name.Trim();
 
         if (!await _subjectRepository.SaveChangesAsync())
             return null;
@@ -71,6 +72,7 @@ public class SubjectService : ISubjectService
         if (subject is null)
             return false;
 
+        _subjectRepository.Remove(subject);
         return await _subjectRepository.SaveChangesAsync();
     }
 }

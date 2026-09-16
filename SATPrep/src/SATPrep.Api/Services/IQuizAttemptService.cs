@@ -8,7 +8,7 @@ public interface IQuizAttemptService
     Task<List<QuizAttemptGetDto>> GetAllAsync();
     Task<List<QuizAttemptGetDto>> GetByUserAsync(long userId);
     Task<List<QuizAttemptGetDto>> GetByQuizAsync(long quizId);
-    Task<QuizAttemptGetDto?> CreateAsync(QuizAttemptCreateDto createDto);
-    Task<bool> CompleteAsync(long attemptId, int score);
+    Task<QuizAttemptGetDto?> StartAsync(long userId, long quizId);
+    Task<QuizAttemptResultDto?> CompleteAsync(long attemptId, long userId, CompleteQuizAttemptDto dto);
     Task<bool> DeleteAsync(long attemptId);
 }

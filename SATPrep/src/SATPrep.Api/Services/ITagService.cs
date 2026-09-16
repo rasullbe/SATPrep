@@ -8,6 +8,6 @@ public interface ITagService
     Task<TagGetDto?> GetByNameAsync(string name);
     Task<List<TagGetDto>> GetAllAsync();
     Task<TagGetDto?> CreateAsync(TagCreateDto createDto);
-    Task<TagGetDto?> UpdateAsync(long tagId, TagCreateDto updateDto);
+    Task<TagGetDto?> UpdateAsync(long tagId, TagUpdateDto updateDto);
     Task<bool> DeleteAsync(long tagId);
 }

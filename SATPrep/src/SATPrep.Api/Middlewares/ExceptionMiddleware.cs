@@ -1,5 +1,6 @@
-﻿using System.Net;
-using System.Text.Json;
+﻿using System.Text.Json;
+using Microsoft.AspNetCore.Diagnostics;
+using SATPrep.Api.DTOs;
 using SATPrep.Api.Exceptions;
 
 namespace SATPrep.Api.Middlewares;
@@ -21,6 +22,10 @@ public class ExceptionMiddleware
         {
             await _next(context);
         }
+        catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
+        {
+            context.Response.StatusCode = 499;
+        }
         catch (Exception ex)
         {
             await HandleExceptionAsync(context, ex);
@@ -29,29 +34,29 @@ public class ExceptionMiddleware
 
     private async Task HandleExceptionAsync(HttpContext context, Exception ex)
     {
-        int statusCode;
-        string message;
-        string? field = null;
+        var response = new ApiErrorResponse
+        {
+            StatusCode = (int)System.Net.HttpStatusCode.InternalServerError,
+            Message = "Something went wrong. Please try again later.",
+            TraceId = context.TraceIdentifier
+        };
 
         if (ex is ApiException apiEx)
         {
-            statusCode = apiEx.StatusCode;
-            message = apiEx.Message;
-            field = (ex as BadRequestException)?.Field;
+            response.StatusCode = apiEx.StatusCode;
+            response.Message = apiEx.Message;
+
+            if (ex is BadRequestException badRequestEx && !string.IsNullOrEmpty(badRequestEx.Field))
+                response.Errors.Add(new ApiFieldError { Field = badRequestEx.Field, Message = badRequestEx.Message });
+            else if (ex is ConflictException conflictEx && !string.IsNullOrEmpty(conflictEx.Field))
+                response.Errors.Add(new ApiFieldError { Field = conflictEx.Field, Message = conflictEx.Message });
         }
         else
         {
-            statusCode = 500;
-            message = "Something went wrong. Please try again later.";
             _logger.LogError(ex, "Unhandled exception");
         }
 
-        context.Response.ContentType = "application/json";
-        context.Response.StatusCode = statusCode;
-
-        var response = new ErrorResponse(message, field);
-        await context.Response.WriteAsync(JsonSerializer.Serialize(response));
+        context.Response.StatusCode = response.StatusCode;
+        await context.Response.WriteAsJsonAsync(response);
     }
-
-    private record ErrorResponse(string Message, string? Field);
 }

@@ -46,9 +46,12 @@ namespace SATPrep.Api.Migrations
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     Email = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
-                    Password = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    Password = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: false),
                     Role = table.Column<int>(type: "integer", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    StudyStreak = table.Column<int>(type: "integer", nullable: false),
+                    LastStudiedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    TotalStudyMinutes = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -107,7 +110,10 @@ namespace SATPrep.Api.Migrations
                     Title = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
                     Description = table.Column<string>(type: "text", nullable: false),
                     CreatedById = table.Column<long>(type: "bigint", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    TimeLimitMinutes = table.Column<int>(type: "integer", nullable: true),
+                    ShuffleQuestions = table.Column<bool>(type: "boolean", nullable: false),
+                    IsPublished = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -115,6 +121,52 @@ namespace SATPrep.Api.Migrations
                     table.ForeignKey(
                         name: "FK_Quizzes_Users_CreatedById",
                         column: x => x.CreatedById,
+                        principalTable: "Users",
+                        principalColumn: "UserId",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "RefreshTokens",
+                columns: table => new
+                {
+                    RefreshTokenId = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    UserId = table.Column<long>(type: "bigint", nullable: false),
+                    TokenHash = table.Column<string>(type: "text", nullable: false),
+                    ExpiresAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    RevokedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RefreshTokens", x => x.RefreshTokenId);
+                    table.ForeignKey(
+                        name: "FK_RefreshTokens_Users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "Users",
+                        principalColumn: "UserId",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "StudySessions",
+                columns: table => new
+                {
+                    StudySessionId = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    UserId = table.Column<long>(type: "bigint", nullable: false),
+                    Date = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    MinutesStudied = table.Column<int>(type: "integer", nullable: false),
+                    QuestionsAnswered = table.Column<int>(type: "integer", nullable: false),
+                    CorrectAnswers = table.Column<int>(type: "integer", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_StudySessions", x => x.StudySessionId);
+                    table.ForeignKey(
+                        name: "FK_StudySessions_Users_UserId",
+                        column: x => x.UserId,
                         principalTable: "Users",
                         principalColumn: "UserId",
                         onDelete: ReferentialAction.Cascade);
@@ -142,6 +194,34 @@ namespace SATPrep.Api.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "UserProgresses",
+                columns: table => new
+                {
+                    UserProgressId = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    UserId = table.Column<long>(type: "bigint", nullable: false),
+                    TopicId = table.Column<long>(type: "bigint", nullable: false),
+                    QuestionsAttempted = table.Column<int>(type: "integer", nullable: false),
+                    CorrectAnswers = table.Column<int>(type: "integer", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_UserProgresses", x => x.UserProgressId);
+                    table.ForeignKey(
+                        name: "FK_UserProgresses_Topics_TopicId",
+                        column: x => x.TopicId,
+                        principalTable: "Topics",
+                        principalColumn: "TopicId",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_UserProgresses_Users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "Users",
+                        principalColumn: "UserId",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "QuizAttempts",
                 columns: table => new
                 {
@@ -151,7 +231,11 @@ namespace SATPrep.Api.Migrations
                     UserId = table.Column<long>(type: "bigint", nullable: false),
                     StartedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     CompletedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    Score = table.Column<int>(type: "integer", nullable: false)
+                    Status = table.Column<int>(type: "integer", nullable: false),
+                    Score = table.Column<int>(type: "integer", nullable: false),
+                    PointsCorrect = table.Column<int>(type: "integer", nullable: false),
+                    TotalQuestions = table.Column<int>(type: "integer", nullable: false),
+                    TimeTakenSeconds = table.Column<int>(type: "integer", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -344,9 +428,43 @@ namespace SATPrep.Api.Migrations
                 column: "CreatedById");
 
             migrationBuilder.CreateIndex(
+                name: "IX_RefreshTokens_TokenHash",
+                table: "RefreshTokens",
+                column: "TokenHash",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RefreshTokens_UserId",
+                table: "RefreshTokens",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_StudySessions_UserId_Date",
+                table: "StudySessions",
+                columns: new[] { "UserId", "Date" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Topics_SubjectId",
                 table: "Topics",
                 column: "SubjectId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserProgresses_TopicId",
+                table: "UserProgresses",
+                column: "TopicId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserProgresses_UserId_TopicId",
+                table: "UserProgresses",
+                columns: new[] { "UserId", "TopicId" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Users_Email",
+                table: "Users",
+                column: "Email",
+                unique: true);
         }
 
         /// <inheritdoc />
@@ -363,6 +481,15 @@ namespace SATPrep.Api.Migrations
 
             migrationBuilder.DropTable(
                 name: "QuizQuestions");
+
+            migrationBuilder.DropTable(
+                name: "RefreshTokens");
+
+            migrationBuilder.DropTable(
+                name: "StudySessions");
+
+            migrationBuilder.DropTable(
+                name: "UserProgresses");
 
             migrationBuilder.DropTable(
                 name: "Choices");

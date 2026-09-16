@@ -14,42 +14,6 @@ public class UserService : IUserService
         _userRepository = userRepository;
     }
 
-    public async Task<UserGetDto?> RegisterAsync(UserCreateDto createDto)
-    {
-        if (createDto is null)
-            throw new ArgumentNullException(nameof(createDto));
-
-        if (await _userRepository.GetByEmailAsync(createDto.Email) is not null)
-            return null;
-
-        var passwordHash = PasswordHasher.Hash(createDto.Password);
-        var user = createDto.ToEntity(passwordHash);
-
-        await _userRepository.AddAsync(user);
-        if (!await _userRepository.SaveChangesAsync())
-            return null;
-
-        return user.ToGetDto();
-    }
-
-    public async Task<UserGetDto?> AuthenticateAsync(string email, string password)
-    {
-        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
-            return null;
-
-        var user = await _userRepository.GetByEmailAsync(email);
-        if (user is null)
-        {
-            PasswordHasher.VerifyDummy(password);
-            return null;
-        }
-
-        if (!PasswordHasher.Verify(user.Password, password))
-            return null;
-
-        return user.ToGetDto();
-    }
-
     public async Task<UserGetDto?> GetByIdAsync(long userId)
     {
         var user = await _userRepository.GetByIdAsync(userId);
@@ -98,6 +62,7 @@ public class UserService : IUserService
         if (user is null)
             return false;
 
+        _userRepository.Remove(user);
         return await _userRepository.SaveChangesAsync();
     }
 
@@ -123,7 +88,6 @@ public class UserService : IUserService
             return false;
 
         user.Password = PasswordHasher.Hash(newPassword);
-
         return await _userRepository.SaveChangesAsync();
     }
 }

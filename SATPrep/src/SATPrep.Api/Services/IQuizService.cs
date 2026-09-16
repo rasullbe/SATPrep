@@ -6,8 +6,10 @@ public interface IQuizService
 {
     Task<QuizGetDto?> GetByIdAsync(long quizId);
     Task<QuizDetailGetDto?> GetDetailByIdAsync(long quizId);
+    Task<QuizTakeDto?> GetTakeDataAsync(long quizId);
     Task<List<QuizGetDto>> GetAllAsync();
     Task<List<QuizGetDto>> GetByCreatorAsync(long creatorId);
+    Task<List<QuizGetDto>> GetPublishedAsync();
     Task<QuizGetDto?> CreateAsync(QuizCreateDto createDto);
     Task<QuizGetDto?> UpdateAsync(long id, QuizUpdateDto dto);
     Task<bool> DeleteAsync(long quizId);

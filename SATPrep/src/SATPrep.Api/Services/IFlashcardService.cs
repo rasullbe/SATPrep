@@ -10,5 +10,5 @@ public interface IFlashcardService
     Task<FlashcardGetDto?> CreateAsync(FlashcardCreateDto createDto);
     Task<FlashcardGetDto?> UpdateAsync(long flashcardId, FlashcardUpdateDto updateDto);
     Task<bool> DeleteAsync(long flashcardId);
-    Task<bool> UpdateNextReviewAsync(long flashcardId, DateTime nextReview);
+    Task<FlashcardGetDto?> ReviewAsync(long flashcardId, FlashcardReviewDto reviewDto);
 }

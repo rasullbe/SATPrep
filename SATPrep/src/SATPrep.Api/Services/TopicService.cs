@@ -36,8 +36,8 @@ public class TopicService : ITopicService
 
     public async Task<List<TopicGetDto>> GetBySubjectAsync(long subjectId)
     {
-        var topics = await _topicRepository.GetAllAsync();
-        return topics.Where(t => t.SubjectId == subjectId).Select(t => t.ToGetDto()).ToList();
+        var topics = await _topicRepository.GetBySubjectAsync(subjectId);
+        return topics.Select(t => t.ToGetDto()).ToList();
     }
 
     public async Task<TopicGetDto?> CreateAsync(TopicCreateDto createDto)
@@ -54,7 +54,7 @@ public class TopicService : ITopicService
         return topic.ToGetDto();
     }
 
-    public async Task<TopicGetDto?> UpdateAsync(long topicId, TopicCreateDto updateDto)
+    public async Task<TopicGetDto?> UpdateAsync(long topicId, TopicUpdateDto updateDto)
     {
         if (updateDto is null)
             throw new ArgumentNullException(nameof(updateDto));
@@ -63,7 +63,8 @@ public class TopicService : ITopicService
         if (topic is null)
             return null;
 
-        topic.Name = updateDto.Name?.Trim() ?? string.Empty;
+        if (updateDto.Name is not null)
+            topic.Name = updateDto.Name.Trim();
 
         if (!await _topicRepository.SaveChangesAsync())
             return null;
@@ -77,6 +78,7 @@ public class TopicService : ITopicService
         if (topic is null)
             return false;
 
+        _topicRepository.Remove(topic);
         return await _topicRepository.SaveChangesAsync();
     }
 }

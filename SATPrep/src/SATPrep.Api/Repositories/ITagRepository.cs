@@ -8,5 +8,6 @@ public interface ITagRepository
     Task<Tag?> GetByNameAsync(string name);
     Task<List<Tag>> GetAllAsync();
     Task AddAsync(Tag tag);
+    void Remove(Tag tag);
     Task<bool> SaveChangesAsync();
 }

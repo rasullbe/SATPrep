@@ -25,6 +25,15 @@ public class QuizService : IQuizService
         return quiz?.ToDetailGetDto();
     }
 
+    public async Task<QuizTakeDto?> GetTakeDataAsync(long quizId)
+    {
+        var quiz = await _quizRepository.GetByIdAsync(quizId);
+        if (quiz is null)
+            return null;
+
+        return quiz.ToTakeDto();
+    }
+
     public async Task<List<QuizGetDto>> GetAllAsync()
     {
         var quizzes = await _quizRepository.GetAllAsync();
@@ -33,8 +42,14 @@ public class QuizService : IQuizService
 
     public async Task<List<QuizGetDto>> GetByCreatorAsync(long creatorId)
     {
-        var quizzes = await _quizRepository.GetAllAsync();
-        return quizzes.Where(q => q.CreatedById == creatorId).Select(q => q.ToGetDto()).ToList();
+        var quizzes = await _quizRepository.GetByCreatorAsync(creatorId);
+        return quizzes.Select(q => q.ToGetDto()).ToList();
+    }
+
+    public async Task<List<QuizGetDto>> GetPublishedAsync()
+    {
+        var quizzes = await _quizRepository.GetPublishedAsync();
+        return quizzes.Select(q => q.ToGetDto()).ToList();
     }
 
     public async Task<QuizGetDto?> CreateAsync(QuizCreateDto createDto)

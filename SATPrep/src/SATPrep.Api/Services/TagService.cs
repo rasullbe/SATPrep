@@ -48,7 +48,7 @@ public class TagService : ITagService
         return tag.ToGetDto();
     }
 
-    public async Task<TagGetDto?> UpdateAsync(long tagId, TagCreateDto updateDto)
+    public async Task<TagGetDto?> UpdateAsync(long tagId, TagUpdateDto updateDto)
     {
         if (updateDto is null)
             throw new ArgumentNullException(nameof(updateDto));
@@ -57,7 +57,8 @@ public class TagService : ITagService
         if (tag is null)
             return null;
 
-        tag.Name = updateDto.Name?.Trim() ?? string.Empty;
+        if (updateDto.Name is not null)
+            tag.Name = updateDto.Name.Trim();
 
         if (!await _tagRepository.SaveChangesAsync())
             return null;
@@ -71,6 +72,7 @@ public class TagService : ITagService
         if (tag is null)
             return false;
 
+        _tagRepository.Remove(tag);
         return await _tagRepository.SaveChangesAsync();
     }
 }

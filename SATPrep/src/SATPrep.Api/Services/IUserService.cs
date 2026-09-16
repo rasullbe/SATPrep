@@ -1,10 +1,9 @@
 ﻿using SATPrep.Api.DTOs;
+
 namespace SATPrep.Api.Services;
 
 public interface IUserService
 {
-    Task<UserGetDto?> RegisterAsync(UserCreateDto createDto);
-    Task<UserGetDto?> AuthenticateAsync(string email, string password);
     Task<UserGetDto?> GetByIdAsync(long userId);
     Task<UserGetDto?> GetByEmailAsync(string email);
     Task<List<UserGetDto>> GetAllAsync();

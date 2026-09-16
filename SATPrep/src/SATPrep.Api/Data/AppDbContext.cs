@@ -16,6 +16,9 @@ public class AppDbContext : DbContext
     public DbSet<QuizAttempt> QuizAttempts { get; set; }
     public DbSet<Tag> Tags { get; set; }
     public DbSet<QuestionTag> QuestionTags { get; set; }
+    public DbSet<StudySession> StudySessions { get; set; }
+    public DbSet<UserProgress> UserProgresses { get; set; }
+    public DbSet<RefreshToken> RefreshTokens { get; set; }
 
     public AppDbContext(DbContextOptions<AppDbContext> options)
         : base(options)

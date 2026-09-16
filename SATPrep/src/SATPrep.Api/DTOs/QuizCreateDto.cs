@@ -13,6 +13,11 @@ public class QuizCreateDto
     [Required]
     public long CreatedById { get; set; }
 
-    // Either supply explicit question ids for an existing pool, or create questions separately
-    public List<long> QuestionIds { get; set; } = new List<long>();
+    public int? TimeLimitMinutes { get; set; }
+
+    public bool ShuffleQuestions { get; set; }
+
+    public bool IsPublished { get; set; } = true;
+
+    public List<long> QuestionIds { get; set; } = new();
 }

@@ -8,5 +8,6 @@ public interface ISubjectRepository
     Task<Subject?> GetByNameAsync(string name);
     Task<List<Subject>> GetAllAsync();
     Task AddAsync(Subject subject);
+    void Remove(Subject subject);
     Task<bool> SaveChangesAsync();
 }

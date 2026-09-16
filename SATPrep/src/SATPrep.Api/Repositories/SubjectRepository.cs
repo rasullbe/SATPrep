@@ -15,7 +15,9 @@ public class SubjectRepository : ISubjectRepository
 
     public async Task<Subject?> GetByIdAsync(long id)
     {
-        return await _context.Subjects.FindAsync(id);
+        return await _context.Subjects
+            .Include(s => s.Topics)
+            .FirstOrDefaultAsync(s => s.SubjectId == id);
     }
 
     public async Task<Subject?> GetByNameAsync(string name)
@@ -26,12 +28,19 @@ public class SubjectRepository : ISubjectRepository
 
     public async Task<List<Subject>> GetAllAsync()
     {
-        return await _context.Subjects.ToListAsync();
+        return await _context.Subjects
+            .Include(s => s.Topics)
+            .ToListAsync();
     }
 
     public async Task AddAsync(Subject subject)
     {
         await _context.Subjects.AddAsync(subject);
+    }
+
+    public void Remove(Subject subject)
+    {
+        _context.Subjects.Remove(subject);
     }
 
     public async Task<bool> SaveChangesAsync()

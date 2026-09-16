@@ -23,9 +23,21 @@ public class FlashcardRepository : IFlashcardRepository
         return await _context.Flashcards.ToListAsync();
     }
 
+    public async Task<List<Flashcard>> GetByUserAsync(long userId)
+    {
+        return await _context.Flashcards
+            .Where(f => f.UserId == userId)
+            .ToListAsync();
+    }
+
     public async Task AddAsync(Flashcard flashcard)
     {
         await _context.Flashcards.AddAsync(flashcard);
+    }
+
+    public void Remove(Flashcard flashcard)
+    {
+        _context.Flashcards.Remove(flashcard);
     }
 
     public async Task<bool> SaveChangesAsync()

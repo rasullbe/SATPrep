@@ -1,106 +1,97 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SATPrep.Api.Configurations;
 using SATPrep.Api.DTOs;
 using SATPrep.Api.Services;
 
-namespace SATPrep.Api.Controllers
+namespace SATPrep.Api.Controllers;
+
+[Route("api/users")]
+[ApiController]
+public class UsersController : ApiControllerBase
 {
-    [Route("api/users")]
-    [ApiController]
-    public class UsersController : ControllerBase
+    private readonly IUserService _userService;
+
+    public UsersController(IUserService userService)
     {
-        private readonly IUserService _userService;
+        _userService = userService;
+    }
 
-        public UsersController(IUserService userService)
-        {
-            _userService = userService;
-        }
+    [HttpGet("{id:long}")]
+    [Authorize]
+    public async Task<ActionResult<UserGetDto>> GetUserById(long id)
+    {
+        var user = await _userService.GetByIdAsync(id);
+        if (user == null)
+            return NotFound();
 
-        [HttpPost]
-        public async Task<ActionResult<UserGetDto>> Register([FromBody] UserCreateDto dto)
-        {
-            var user = await _userService.RegisterAsync(dto);
-            return StatusCode(StatusCodes.Status201Created, user);
-        }
+        return Ok(user);
+    }
 
-        [HttpPut("{id:long}")]
-        public async Task<ActionResult<UserGetDto>> Update(long id, [FromBody] UserUpdateDto dto)
-        {
-            var user = await _userService.UpdateAsync(id, dto);
-            if (user == null)
-            {
-                return NotFound();
-            }
-            return Ok(user);
-        }
+    [HttpGet("by-email")]
+    public async Task<ActionResult<UserGetDto>> GetByEmail([FromQuery] string email)
+    {
+        var user = await _userService.GetByEmailAsync(email);
+        if (user == null)
+            return NotFound();
 
-        [HttpDelete("{id:long}")]
-        public async Task<IActionResult> Delete(long id)
-        {
-            var deleted = await _userService.DeleteAsync(id);
-            if (!deleted)
-            {
-                return NotFound();
-            }
-            return NoContent();
-        }
+        return Ok(user);
+    }
 
-        [HttpGet("{id:long}")]
-        public async Task<ActionResult<UserGetDto>> GetUserById(long id)
-        {
-            var user = await _userService.GetByIdAsync(id);
-            if (user == null)
-            {
-                return NotFound();
-            }
-            return Ok(user);
-        }
+    [HttpGet("email-exists")]
+    public async Task<ActionResult<bool>> EmailExists([FromQuery] string email)
+    {
+        var exists = await _userService.EmailExistsAsync(email);
+        return Ok(exists);
+    }
 
-        [HttpGet("by-email")]
-        public async Task<ActionResult<UserGetDto>> GetByEmail([FromQuery] string email)
-        {
-            var user = await _userService.GetByEmailAsync(email);
-            if (user == null)
-            {
-                return NotFound();
-            }
-            return Ok(user);
-        }
+    [HttpGet]
+    [Authorize(Policy = AuthPolicies.AdminOnly)]
+    public async Task<ActionResult<IEnumerable<UserGetDto>>> ListUsers()
+    {
+        var users = await _userService.GetAllAsync();
+        return Ok(users);
+    }
 
-        [HttpGet("email-exists")]
-        public async Task<ActionResult<bool>> EmailExists([FromQuery] string email)
-        {
-            var exists = await _userService.EmailExistsAsync(email);
-            return Ok(exists);
-        }
+    [HttpPut("{id:long}")]
+    [Authorize]
+    public async Task<ActionResult<UserGetDto>> Update(long id, [FromBody] UserUpdateDto dto)
+    {
+        if (!TryGetUserId(out var userId) || userId != id)
+            return Forbid();
 
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<UserGetDto>>> ListUsers()
-        {
-            var users = await _userService.GetAllAsync();
-            return Ok(users);
-        }
+        var user = await _userService.UpdateAsync(id, dto);
+        if (user == null)
+            return NotFound();
 
-        [HttpPost("auth")]
-        public async Task<ActionResult<UserGetDto>> AuthenticateUser([FromBody] UserLoginDto dto)
-        {
-            var user = await _userService.AuthenticateAsync(dto.Email, dto.Password);
-            if (user == null)
-            {
-                return Unauthorized();
-            }
-            return Ok(user);
-        }
+        return Ok(user);
+    }
 
-        [HttpPut("{id:long}/password")]
-        public async Task<IActionResult> ChangePassword(long id, [FromBody] ChangePasswordDto dto)
-        {
-            var changed = await _userService.ChangePasswordAsync(id, dto.CurrentPassword, dto.NewPassword);
-            if (!changed)
-            {
-                return BadRequest();
-            }
-            return NoContent();
-        }
+    [HttpDelete("{id:long}")]
+    [Authorize]
+    public async Task<IActionResult> Delete(long id)
+    {
+        if (!TryGetUserId(out var userId) || userId != id)
+            return Forbid();
+
+        var deleted = await _userService.DeleteAsync(id);
+        if (!deleted)
+            return NotFound();
+
+        return NoContent();
+    }
+
+    [HttpPut("{id:long}/password")]
+    [Authorize]
+    public async Task<IActionResult> ChangePassword(long id, [FromBody] ChangePasswordDto dto)
+    {
+        if (!TryGetUserId(out var userId) || userId != id)
+            return Forbid();
+
+        var changed = await _userService.ChangePasswordAsync(id, dto.CurrentPassword, dto.NewPassword);
+        if (!changed)
+            return BadRequest();
+
+        return NoContent();
     }
 }

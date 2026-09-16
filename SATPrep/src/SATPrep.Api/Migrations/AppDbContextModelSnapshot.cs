@@ -17,7 +17,7 @@ namespace SATPrep.Api.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.11")
+                .HasAnnotation("ProductVersion", "10.0.12")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -42,7 +42,7 @@ namespace SATPrep.Api.Migrations
 
                     b.HasIndex("TagId");
 
-                    b.ToTable("QuestionTags", (string)null);
+                    b.ToTable("QuestionTags");
                 });
 
             modelBuilder.Entity("SATPrep.Api.Entities.Answer", b =>
@@ -76,7 +76,7 @@ namespace SATPrep.Api.Migrations
 
                     b.HasIndex("SelectedChoiceId");
 
-                    b.ToTable("Answers", (string)null);
+                    b.ToTable("Answers");
                 });
 
             modelBuilder.Entity("SATPrep.Api.Entities.Choice", b =>
@@ -101,7 +101,7 @@ namespace SATPrep.Api.Migrations
 
                     b.HasIndex("QuestionId");
 
-                    b.ToTable("Choices", (string)null);
+                    b.ToTable("Choices");
                 });
 
             modelBuilder.Entity("SATPrep.Api.Entities.Flashcard", b =>
@@ -133,7 +133,7 @@ namespace SATPrep.Api.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Flashcards", (string)null);
+                    b.ToTable("Flashcards");
                 });
 
             modelBuilder.Entity("SATPrep.Api.Entities.Question", b =>
@@ -158,7 +158,7 @@ namespace SATPrep.Api.Migrations
 
                     b.HasIndex("TopicId");
 
-                    b.ToTable("Questions", (string)null);
+                    b.ToTable("Questions");
                 });
 
             modelBuilder.Entity("SATPrep.Api.Entities.Quiz", b =>
@@ -179,6 +179,15 @@ namespace SATPrep.Api.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<bool>("IsPublished")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("ShuffleQuestions")
+                        .HasColumnType("boolean");
+
+                    b.Property<int?>("TimeLimitMinutes")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -188,7 +197,7 @@ namespace SATPrep.Api.Migrations
 
                     b.HasIndex("CreatedById");
 
-                    b.ToTable("Quizzes", (string)null);
+                    b.ToTable("Quizzes");
                 });
 
             modelBuilder.Entity("SATPrep.Api.Entities.QuizAttempt", b =>
@@ -202,6 +211,9 @@ namespace SATPrep.Api.Migrations
                     b.Property<DateTime?>("CompletedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int>("PointsCorrect")
+                        .HasColumnType("integer");
+
                     b.Property<long>("QuizId")
                         .HasColumnType("bigint");
 
@@ -210,6 +222,15 @@ namespace SATPrep.Api.Migrations
 
                     b.Property<DateTime>("StartedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("TimeTakenSeconds")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TotalQuestions")
+                        .HasColumnType("integer");
 
                     b.Property<long>("UserId")
                         .HasColumnType("bigint");
@@ -220,7 +241,7 @@ namespace SATPrep.Api.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("QuizAttempts", (string)null);
+                    b.ToTable("QuizAttempts");
                 });
 
             modelBuilder.Entity("SATPrep.Api.Entities.QuizQuestion", b =>
@@ -246,7 +267,72 @@ namespace SATPrep.Api.Migrations
 
                     b.HasIndex("QuizId");
 
-                    b.ToTable("QuizQuestions", (string)null);
+                    b.ToTable("QuizQuestions");
+                });
+
+            modelBuilder.Entity("SATPrep.Api.Entities.RefreshToken", b =>
+                {
+                    b.Property<long>("RefreshTokenId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("RefreshTokenId"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<long>("UserId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("RefreshTokenId");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("RefreshTokens");
+                });
+
+            modelBuilder.Entity("SATPrep.Api.Entities.StudySession", b =>
+                {
+                    b.Property<long>("StudySessionId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("StudySessionId"));
+
+                    b.Property<int>("CorrectAnswers")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("MinutesStudied")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("QuestionsAnswered")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("UserId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("StudySessionId");
+
+                    b.HasIndex("UserId", "Date")
+                        .IsUnique();
+
+                    b.ToTable("StudySessions");
                 });
 
             modelBuilder.Entity("SATPrep.Api.Entities.Subject", b =>
@@ -264,7 +350,7 @@ namespace SATPrep.Api.Migrations
 
                     b.HasKey("SubjectId");
 
-                    b.ToTable("Subjects", (string)null);
+                    b.ToTable("Subjects");
                 });
 
             modelBuilder.Entity("SATPrep.Api.Entities.Tag", b =>
@@ -282,7 +368,7 @@ namespace SATPrep.Api.Migrations
 
                     b.HasKey("TagId");
 
-                    b.ToTable("Tags", (string)null);
+                    b.ToTable("Tags");
                 });
 
             modelBuilder.Entity("SATPrep.Api.Entities.Topic", b =>
@@ -305,7 +391,7 @@ namespace SATPrep.Api.Migrations
 
                     b.HasIndex("SubjectId");
 
-                    b.ToTable("Topics", (string)null);
+                    b.ToTable("Topics");
                 });
 
             modelBuilder.Entity("SATPrep.Api.Entities.User", b =>
@@ -324,6 +410,9 @@ namespace SATPrep.Api.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<DateTime?>("LastStudiedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -331,15 +420,54 @@ namespace SATPrep.Api.Migrations
 
                     b.Property<string>("Password")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
 
                     b.Property<int>("Role")
                         .HasColumnType("integer");
 
+                    b.Property<int>("StudyStreak")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TotalStudyMinutes")
+                        .HasColumnType("integer");
+
                     b.HasKey("UserId");
 
-                    b.ToTable("Users", (string)null);
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("SATPrep.Api.Entities.UserProgress", b =>
+                {
+                    b.Property<long>("UserProgressId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("UserProgressId"));
+
+                    b.Property<int>("CorrectAnswers")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("QuestionsAttempted")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("TopicId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("UserId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("UserProgressId");
+
+                    b.HasIndex("TopicId");
+
+                    b.HasIndex("UserId", "TopicId")
+                        .IsUnique();
+
+                    b.ToTable("UserProgresses");
                 });
 
             modelBuilder.Entity("QuestionTag", b =>
@@ -433,7 +561,7 @@ namespace SATPrep.Api.Migrations
             modelBuilder.Entity("SATPrep.Api.Entities.QuizAttempt", b =>
                 {
                     b.HasOne("SATPrep.Api.Entities.Quiz", "Quiz")
-                        .WithMany()
+                        .WithMany("Attempts")
                         .HasForeignKey("QuizId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -468,6 +596,28 @@ namespace SATPrep.Api.Migrations
                     b.Navigation("Quiz");
                 });
 
+            modelBuilder.Entity("SATPrep.Api.Entities.RefreshToken", b =>
+                {
+                    b.HasOne("SATPrep.Api.Entities.User", "User")
+                        .WithMany("RefreshTokens")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SATPrep.Api.Entities.StudySession", b =>
+                {
+                    b.HasOne("SATPrep.Api.Entities.User", "User")
+                        .WithMany("StudySessions")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("SATPrep.Api.Entities.Topic", b =>
                 {
                     b.HasOne("SATPrep.Api.Entities.Subject", "Subject")
@@ -479,6 +629,25 @@ namespace SATPrep.Api.Migrations
                     b.Navigation("Subject");
                 });
 
+            modelBuilder.Entity("SATPrep.Api.Entities.UserProgress", b =>
+                {
+                    b.HasOne("SATPrep.Api.Entities.Topic", "Topic")
+                        .WithMany()
+                        .HasForeignKey("TopicId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SATPrep.Api.Entities.User", "User")
+                        .WithMany("Progress")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Topic");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("SATPrep.Api.Entities.Question", b =>
                 {
                     b.Navigation("Choices");
@@ -488,6 +657,8 @@ namespace SATPrep.Api.Migrations
 
             modelBuilder.Entity("SATPrep.Api.Entities.Quiz", b =>
                 {
+                    b.Navigation("Attempts");
+
                     b.Navigation("QuizQuestions");
                 });
 
@@ -518,6 +689,12 @@ namespace SATPrep.Api.Migrations
                     b.Navigation("CreatedQuizzes");
 
                     b.Navigation("Flashcards");
+
+                    b.Navigation("Progress");
+
+                    b.Navigation("RefreshTokens");
+
+                    b.Navigation("StudySessions");
                 });
 #pragma warning restore 612, 618
         }

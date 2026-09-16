@@ -65,4 +65,9 @@ ehthumbs.db
 .env
 .env.*
 secrets.json
+appsettings.Secrets.json
 appsettings.*.local.json
+
+# Frontend
+**/node_modules/
+**/.next/

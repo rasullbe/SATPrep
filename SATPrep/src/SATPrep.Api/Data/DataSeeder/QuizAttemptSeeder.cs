@@ -21,7 +21,11 @@ public static class QuizAttemptSeeder
             UserId = user.UserId,
             StartedAt = DateTime.UtcNow,
             CompletedAt = DateTime.UtcNow,
-            Score = 0
+            Score = 0,
+            PointsCorrect = 0,
+            TotalQuestions = quiz.QuizQuestions.Count,
+            TimeTakenSeconds = 60,
+            Status = AttemptStatus.Completed
         };
 
         await context.QuizAttempts.AddAsync(attempt);
@@ -41,7 +45,8 @@ public static class QuizAttemptSeeder
         await context.Answers.AddAsync(ans);
 
         // simple score calculation
-        attempt.Score = ans.IsCorrect ? 1 : 0;
+        attempt.Score = ans.IsCorrect ? 100 : 0;
+        attempt.PointsCorrect = ans.IsCorrect ? 1 : 0;
 
         await context.SaveChangesAsync();
     }
