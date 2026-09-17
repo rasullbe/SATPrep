@@ -303,14 +303,89 @@ export default function BluebookExamPage() {
     );
   }
 
-  const questions = quiz.questions;
+  const questions = quiz?.questions || [];
   const answeredCount = answers.size;
   const currentQuestion = questions[currentIndex];
 
-  const parsed = parseQuestion(currentQuestion?.text || "", currentQuestion?.choices || []);
+  const parsed = useMemo(() => {
+    return parseQuestion(currentQuestion?.text || "", currentQuestion?.choices || []);
+  }, [currentQuestion]);
+
   const isCurrentAnswered = answers.has(currentQuestion?.questionId);
   const isQuestionFlagged = flagged.has(currentQuestion?.questionId);
-  const currentEliminated = eliminatedChoices.get(currentQuestion?.questionId) || new Set();
+  const currentEliminated = eliminatedChoices.get(currentQuestion?.questionId) || new Set<number>();
+
+  // Digital SAT Pro Keyboard Shortcuts Engine
+  useEffect(() => {
+    if (phase !== "active" || !currentQuestion) return;
+
+    const handleExamKeyDown = (e: KeyboardEvent) => {
+      // Don't intercept if student is typing in an input, textarea, or if modals are open
+      const target = e.target as HTMLElement;
+      if (
+        target?.tagName === "INPUT" ||
+        target?.tagName === "TEXTAREA" ||
+        isCalculatorOpen ||
+        isFormulaSheetOpen ||
+        isDirectionsOpen
+      ) {
+        return;
+      }
+
+      const key = e.key.toLowerCase();
+
+      // 1. Multiple Choice letter shortcuts: 'a', 'b', 'c', 'd' or '1', '2', '3', '4'
+      if (!parsed.isStudentProduced && parsed.choices.length > 0) {
+        let choiceIndex = -1;
+        if (key === "a" || key === "1") choiceIndex = 0;
+        else if (key === "b" || key === "2") choiceIndex = 1;
+        else if (key === "c" || key === "3") choiceIndex = 2;
+        else if (key === "d" || key === "4") choiceIndex = 3;
+
+        if (choiceIndex >= 0 && choiceIndex < parsed.choices.length) {
+          e.preventDefault();
+          const targetChoice = parsed.choices[choiceIndex];
+          if (!currentEliminated.has(targetChoice.choiceId)) {
+            selectChoice(currentQuestion.questionId, targetChoice.choiceId);
+          }
+          return;
+        }
+      }
+
+      // 2. Navigation: ArrowLeft / 'j' for Previous, ArrowRight / 'k' for Next
+      if (e.key === "ArrowLeft" || key === "j") {
+        e.preventDefault();
+        setCurrentIndex((i) => Math.max(0, i - 1));
+      } else if (e.key === "ArrowRight" || key === "k") {
+        e.preventDefault();
+        setCurrentIndex((i) => Math.min(questions.length - 1, i + 1));
+      }
+
+      // 3. Mark for Review: 'm'
+      else if (key === "m") {
+        e.preventDefault();
+        toggleFlag(currentQuestion.questionId);
+      }
+
+      // 4. Cross-out toggle: 'x'
+      else if (key === "x" && !parsed.isStudentProduced) {
+        e.preventDefault();
+        setIsEliminatorMode((prev) => !prev);
+      }
+    };
+
+    window.addEventListener("keydown", handleExamKeyDown);
+    return () => window.removeEventListener("keydown", handleExamKeyDown);
+  }, [
+    phase,
+    parsed,
+    currentQuestion,
+    currentEliminated,
+    questions.length,
+    isCalculatorOpen,
+    isFormulaSheetOpen,
+    isDirectionsOpen,
+  ]);
 
   /* ------------------- INTRO PHASE ------------------- */
   if (phase === "intro") {
@@ -753,23 +828,38 @@ export default function BluebookExamPage() {
 
       {/* 3. BLUEBOOK BOTTOM NAVIGATION BAR */}
       <footer className="bluebook-footer relative flex h-16 shrink-0 items-center justify-between px-4 sm:px-8">
-        <div className="text-xs font-semibold text-slate-600 sm:text-sm">
-          Question <span className="font-bold text-[#002b49]">{currentIndex + 1}</span> of{" "}
-          <span className="font-bold text-[#002b49]">{questions.length}</span>
+        <div className="flex items-center gap-4">
+          <div className="text-xs font-semibold text-slate-600 sm:text-sm">
+            Question <span className="font-bold text-[#002b49]">{currentIndex + 1}</span> of{" "}
+            <span className="font-bold text-[#002b49]">{questions.length}</span>
+          </div>
+
+          {/* Desktop Shortcut Hints */}
+          <div className="hidden xl:flex items-center gap-2 text-[11px] text-slate-400">
+            <span className="text-slate-300">|</span>
+            <span className="rounded bg-slate-100 border border-slate-200 px-1.5 py-0.5 font-mono text-[10px] font-bold text-slate-600">A-D</span>
+            <span>Select</span>
+            <span className="rounded bg-slate-100 border border-slate-200 px-1.5 py-0.5 font-mono text-[10px] font-bold text-slate-600">← / →</span>
+            <span>Nav</span>
+            <span className="rounded bg-slate-100 border border-slate-200 px-1.5 py-0.5 font-mono text-[10px] font-bold text-slate-600">M</span>
+            <span>Flag</span>
+            <span className="rounded bg-slate-100 border border-slate-200 px-1.5 py-0.5 font-mono text-[10px] font-bold text-slate-600">X</span>
+            <span>Cross-out</span>
+          </div>
         </div>
 
         {/* Center: Question Grid Navigator Popover */}
         <div className="relative">
           <button
             onClick={() => setIsNavMenuOpen((prev) => !prev)}
-            className="flex items-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-1.5 text-xs font-bold text-slate-800 shadow-xs hover:bg-slate-50 transition"
+            className="flex items-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-1.5 text-xs font-bold text-slate-800 shadow-xs hover:bg-slate-50 transition active:scale-98"
           >
             <span>Question {currentIndex + 1} of {questions.length}</span>
             <span className="text-[11px] text-slate-400">{isNavMenuOpen ? "▼" : "▲"}</span>
           </button>
 
           {isNavMenuOpen && (
-            <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-30 w-72 sm:w-80 rounded-2xl border border-slate-200 bg-white p-4 shadow-xl">
+            <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-30 w-80 sm:w-96 rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl">
               <div className="flex items-center justify-between pb-2 border-b border-slate-100 text-xs">
                 <span className="font-bold text-[#002b49]">Question Navigator</span>
                 <button
@@ -778,6 +868,19 @@ export default function BluebookExamPage() {
                 >
                   ✕
                 </button>
+              </div>
+
+              {/* Status breakdown pills */}
+              <div className="my-2 flex items-center justify-between text-[11px] bg-slate-50 p-2 rounded-lg border border-slate-100">
+                <span className="flex items-center gap-1 font-semibold text-slate-700">
+                  <span className="h-2.5 w-2.5 rounded-full bg-[#002b49]" /> {answeredCount} Answered
+                </span>
+                <span className="flex items-center gap-1 font-semibold text-slate-500">
+                  <span className="h-2.5 w-2.5 rounded-full border border-dashed border-slate-400 bg-white" /> {questions.length - answeredCount} Unanswered
+                </span>
+                <span className="flex items-center gap-1 font-semibold text-amber-700">
+                  <span>🚩</span> {flagged.size} Flagged
+                </span>
               </div>
 
               <div className="my-3 grid grid-cols-5 gap-2 max-h-56 overflow-y-auto p-1">
@@ -793,27 +896,42 @@ export default function BluebookExamPage() {
                         setCurrentIndex(idx);
                         setIsNavMenuOpen(false);
                       }}
-                      className={`relative flex h-10 w-10 items-center justify-center rounded-lg text-xs font-bold transition ${
+                      className={`relative flex h-10 w-10 items-center justify-center rounded-lg text-xs font-bold transition active:scale-95 ${
                         isCurrent
                           ? "ring-2 ring-[#0077c8] ring-offset-1 bg-[#002b49] text-white"
                           : answered
-                            ? "bg-[#002b49] text-white"
-                            : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
+                            ? "bg-[#002b49] text-white hover:bg-[#0a3d66]"
+                            : "border border-dashed border-slate-400 bg-white text-slate-700 hover:border-[#0077c8] hover:bg-sky-50"
                       }`}
                     >
                       {idx + 1}
                       {hasFlag && (
-                        <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-amber-400 ring-1 ring-white" />
+                        <span className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full bg-amber-400 ring-1 ring-white flex items-center justify-center text-[8px] text-white font-bold">
+                          🚩
+                        </span>
                       )}
                     </button>
                   );
                 })}
               </div>
 
-              <div className="border-t border-slate-100 pt-2 text-[11px] text-slate-500 flex justify-between">
-                <span>● Answered ({answeredCount})</span>
-                <span>○ Left ({questions.length - answeredCount})</span>
-              </div>
+              {/* Jump to Next Unanswered */}
+              {questions.length - answeredCount > 0 && (
+                <div className="border-t border-slate-100 pt-2 text-center">
+                  <button
+                    onClick={() => {
+                      const nextUnansweredIdx = questions.findIndex((q) => !answers.has(q.questionId));
+                      if (nextUnansweredIdx !== -1) {
+                        setCurrentIndex(nextUnansweredIdx);
+                        setIsNavMenuOpen(false);
+                      }
+                    }}
+                    className="text-xs font-bold text-[#0077c8] hover:underline"
+                  >
+                    Jump to next unanswered question →
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -825,7 +943,7 @@ export default function BluebookExamPage() {
             disabled={currentIndex === 0}
             className="btn-bluebook-secondary"
           >
-            Back
+            ← Back
           </button>
 
           {currentIndex === questions.length - 1 ? (

@@ -15,6 +15,15 @@ function calculateSatScore(percentage: number): number {
   return Math.min(1600, Math.max(400, Math.round(raw / 10) * 10));
 }
 
+function getPercentileBenchmark(score: number): { label: string; badgeColor: string } {
+  if (score >= 1520) return { label: "99th Percentile (Top 1%)", badgeColor: "bg-amber-100 text-amber-900 border-amber-300" };
+  if (score >= 1450) return { label: "97th Percentile (Top 3%)", badgeColor: "bg-blue-100 text-blue-900 border-blue-300" };
+  if (score >= 1350) return { label: "90th Percentile (Top 10%)", badgeColor: "bg-sky-100 text-sky-900 border-sky-300" };
+  if (score >= 1200) return { label: "75th Percentile (Above Average)", badgeColor: "bg-emerald-100 text-emerald-900 border-emerald-300" };
+  if (score >= 1050) return { label: "50th Percentile (National Average)", badgeColor: "bg-slate-100 text-slate-700 border-slate-300" };
+  return { label: "Foundational Range", badgeColor: "bg-slate-100 text-slate-600 border-slate-200" };
+}
+
 export default function DashboardPage() {
   const { user } = useAuth();
   const { data, loading, error, reload } = useAsyncData<DashboardDto>(getDashboard);
@@ -47,6 +56,7 @@ export default function DashboardPage() {
   const compositeSat = calculateSatScore(data.user.averageScore);
   const rwScore = Math.round(compositeSat / 2 / 10) * 10;
   const mathScore = compositeSat - rwScore;
+  const benchmark = getPercentileBenchmark(compositeSat);
 
   return (
     <div className="space-y-8">
@@ -103,10 +113,15 @@ export default function DashboardPage() {
           </div>
 
           {data.user.totalQuestionsAnswered > 0 ? (
-            <div className="mt-3 flex items-center gap-3 border-t border-slate-100 pt-3 text-xs text-slate-600">
-              <span>RW: <strong className="text-slate-900">{rwScore}</strong></span>
-              <span className="text-slate-300">|</span>
-              <span>Math: <strong className="text-slate-900">{mathScore}</strong></span>
+            <div className="mt-2.5 space-y-2.5 border-t border-slate-100 pt-2.5">
+              <div className="flex items-center gap-3 text-xs text-slate-600">
+                <span>RW: <strong className="text-slate-900">{rwScore}</strong></span>
+                <span className="text-slate-300">|</span>
+                <span>Math: <strong className="text-slate-900">{mathScore}</strong></span>
+              </div>
+              <div className={`inline-block rounded-md border px-2 py-0.5 text-[10px] font-bold ${benchmark.badgeColor}`}>
+                {benchmark.label}
+              </div>
             </div>
           ) : (
             <p className="mt-3 text-xs text-slate-400 border-t border-slate-100 pt-3">
